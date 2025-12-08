@@ -160,29 +160,29 @@ export default function AnalyticsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
-          <p className="text-muted-foreground">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Analytics</h2>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Detailed insights into your API usage
           </p>
         </div>
-        <div className="flex gap-2">
-          <select 
-            value={period} 
+        <div className="flex flex-wrap gap-2">
+          <select
+            value={period}
             onChange={(e) => setPeriod(e.target.value)}
-            className="px-3 py-2 border rounded-md"
+            className="px-3 py-2 border rounded-md text-sm"
           >
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
             <option value="90d">Last 90 days</option>
           </select>
           {(period === '7d' || period === '30d') && (
-            <select 
-              value={interval} 
+            <select
+              value={interval}
               onChange={(e) => setInterval(e.target.value)}
-              className="px-3 py-2 border rounded-md"
+              className="px-3 py-2 border rounded-md text-sm"
             >
               <option value="1h">Hourly</option>
               <option value="1d">Daily</option>
@@ -192,35 +192,35 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Total Requests</CardDescription>
-            <CardTitle className="text-3xl">
+            <CardDescription className="text-xs sm:text-sm">Total Requests</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl">
               {usageData?.summary?.total_requests?.toLocaleString() || 0}
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Success Rate</CardDescription>
-            <CardTitle className="text-3xl">
+            <CardDescription className="text-xs sm:text-sm">Success Rate</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl">
               {usageData?.summary?.success_rate || 0}%
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Avg Response Time</CardDescription>
-            <CardTitle className="text-3xl">
+            <CardDescription className="text-xs sm:text-sm">Avg Response Time</CardDescription>
+            <CardTitle className="text-xl sm:text-3xl">
               {usageData?.summary?.avg_response_time || 0}ms
             </CardTitle>
           </CardHeader>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardDescription>Top Endpoint</CardDescription>
-            <CardTitle className="text-lg">
+            <CardDescription className="text-xs sm:text-sm">Top Endpoint</CardDescription>
+            <CardTitle className="text-sm sm:text-lg truncate">
               {endpointsData?.endpoints?.[0]?.endpoint?.replace(/\/api\/v1\//, '') || 'N/A'}
             </CardTitle>
           </CardHeader>
@@ -257,17 +257,17 @@ export default function AnalyticsPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         {/* Top Endpoints */}
         <Card>
           <CardHeader>
-            <CardTitle>Top Endpoints</CardTitle>
-            <CardDescription>Most frequently used API endpoints</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Top Endpoints</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Most frequently used API endpoints</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-x-auto">
             {endpointsData?.endpoints?.length > 0 ? (
               <>
-                <Bar 
+                <Bar
                   data={endpointsChartData}
                   options={{
                     indexAxis: 'y' as const,
@@ -281,9 +281,9 @@ export default function AnalyticsPage() {
                 />
                 <div className="mt-4 space-y-2">
                   {endpointsData.endpoints.slice(0, 5).map((endpoint: any, i: number) => (
-                    <div key={i} className="flex justify-between text-sm">
+                    <div key={i} className="flex justify-between text-xs sm:text-sm gap-2">
                       <span className="truncate">{endpoint.endpoint.replace(/\/api\/v1\//, '')}</span>
-                      <span className="font-medium">{endpoint.count} ({endpoint.percentage}%)</span>
+                      <span className="font-medium whitespace-nowrap">{endpoint.count} ({endpoint.percentage}%)</span>
                     </div>
                   ))}
                 </div>
@@ -297,15 +297,15 @@ export default function AnalyticsPage() {
         {/* Validation Types */}
         <Card>
           <CardHeader>
-            <CardTitle>Validation Types</CardTitle>
-            <CardDescription>Distribution of validation methods</CardDescription>
+            <CardTitle className="text-base sm:text-lg">Validation Types</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Distribution of validation methods</CardDescription>
           </CardHeader>
           <CardContent>
             {validationTypesData?.types?.length > 0 ? (
               <>
                 <div className="flex justify-center mb-4">
-                  <div className="w-64 h-64">
-                    <Doughnut 
+                  <div className="w-48 h-48 sm:w-64 sm:h-64">
+                    <Doughnut
                       data={validationTypesChartData}
                       options={{
                         responsive: true,
@@ -321,7 +321,7 @@ export default function AnalyticsPage() {
                 </div>
                 <div className="space-y-2">
                   {validationTypesData.types.map((type: any, i: number) => (
-                    <div key={i} className="flex justify-between text-sm">
+                    <div key={i} className="flex justify-between text-xs sm:text-sm">
                       <span className="capitalize">{type.type}</span>
                       <span className="font-medium">{type.count} ({type.percentage}%)</span>
                     </div>

@@ -1,0 +1,23 @@
+# robots.txt for ValidInk
+User-agent: *
+Allow: /
+
+# Disallow dashboard and auth pages (require login)
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /login
+Disallow: /register
+Disallow: /forgot-password
+Disallow: /api/
+
+# Allow search engines to crawl public pages
+Allow: /
+Allow: /docs
+Allow: /help
+Allow: /blog
+Allow: /about
+Allow: /privacy
+Allow: /terms
+
+# Sitemap location
+Sitemap: https://validink.com/sitemap.xml

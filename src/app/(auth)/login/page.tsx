@@ -1,22 +1,48 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Mail, ShieldCheck, Lock, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Navbar } from '@/components/marketing/navbar';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
   const [totpCode, setTotpCode] = useState('');
   const [showTwoFactor, setShowTwoFactor] = useState(false);
+
+  // Redirect to dashboard if already logged in
+  useEffect(() => {
+    if (status === 'authenticated' && session) {
+      router.push('/dashboard');
+    }
+  }, [session, status, router]);
+
+  // Show loading while checking auth
+  if (status === 'loading') {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render login page for authenticated users
+  if (status === 'authenticated') {
+    return null;
+  }
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,9 +85,11 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
-      <div className="flex items-center justify-center py-12">
-        <div className="mx-auto w-[350px] space-y-6">
+    <div className="flex min-h-screen flex-col">
+      <Navbar />
+      <div className="flex-1 w-full lg:grid lg:grid-cols-2">
+        <div className="flex items-center justify-center py-8 sm:py-12 px-4 min-h-[calc(100vh-4rem)] lg:min-h-0">
+          <div className="w-full max-w-[350px] space-y-6">
           <div className="flex flex-col space-y-2 text-center">
             <h1 className="text-3xl font-bold tracking-tighter">
               {showTwoFactor ? 'Two-Factor Authentication' : 'Welcome back'}
@@ -205,6 +233,7 @@ export default function LoginPage() {
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl opacity-50" />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );

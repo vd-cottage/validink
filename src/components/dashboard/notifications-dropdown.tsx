@@ -14,7 +14,7 @@ import { useState } from 'react';
 const INITIAL_NOTIFICATIONS = [
     {
         id: '1',
-        title: 'Welcome to EmailPro!',
+        title: 'Welcome to Validink!',
         description: 'Get started by validating your first email list.',
         time: 'Just now',
         read: false,

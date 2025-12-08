@@ -35,16 +35,16 @@ export default function DashboardPage() {
   const s = stats as any;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Dashboard</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Overview of your email validation activity
         </p>
       </div>
 
       {/* Primary Stats - Validations */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Validations</CardTitle>
@@ -110,7 +110,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Secondary Stats Row - Credits, Requests, Performance */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
         {/* Credits Card */}
         <Card className="border-l-4 border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -196,7 +196,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Validation Period Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-2 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Today</CardTitle>
@@ -243,22 +243,24 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts and Activity */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
+        <Card className="lg:col-span-4">
           <CardHeader>
-            <CardTitle>Validation Analytics</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">Validation Analytics</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Your email validation trends over time
             </CardDescription>
           </CardHeader>
-          <CardContent className="pl-2">
-            <StatsChart data={analytics} stats={s} />
+          <CardContent className="pl-0 sm:pl-2">
+            <div className="w-full overflow-x-auto">
+              <StatsChart data={analytics} stats={s} />
+            </div>
           </CardContent>
         </Card>
-        <Card className="col-span-3">
+        <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base sm:text-lg">Recent Activity</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">
               Your latest email validations
             </CardDescription>
           </CardHeader>

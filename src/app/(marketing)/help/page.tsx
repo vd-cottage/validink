@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Search, HelpCircle, Mail, MessageSquare } from 'lucide-react';
+import { Navbar } from '@/components/marketing/navbar';
+import { Footer } from '@/components/marketing/footer';
 
 export default function HelpPage() {
   const faqs = [
@@ -59,7 +63,7 @@ export default function HelpPage() {
     {
       icon: HelpCircle,
       title: 'Getting Started',
-      description: 'New to EmailPro? Start here',
+      description: 'New to Validink? Start here',
       link: '/docs'
     },
     {
@@ -78,36 +82,16 @@ export default function HelpPage() {
       icon: MessageSquare,
       title: 'Contact Support',
       description: 'Get help from our team',
-      link: 'mailto:support@emailpro.com'
+      link: 'mailto:support@validink.io'
     },
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-primary">EmailPro</span>
-          </Link>
-          <nav className="flex items-center space-x-6">
-            <Link href="/docs" className="text-sm font-medium">
-              Docs
-            </Link>
-            <Link href="/help" className="text-sm font-medium">
-              Help
-            </Link>
-            <Link href="/login">
-              <Button variant="ghost">Sign in</Button>
-            </Link>
-            <Link href="/register">
-              <Button>Get Started</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-background">
+      <Navbar />
 
-      <div className="container py-12">
+      <main className="flex-1">
+        <div className="container py-12 px-4 sm:px-6">
         {/* Hero */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">How can we help?</h1>
@@ -173,7 +157,7 @@ export default function HelpPage() {
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button asChild>
-                  <a href="mailto:support@emailpro.com">
+                  <a href="mailto:support@validink.io">
                     <Mail className="mr-2 h-4 w-4" />
                     Email Support
                   </a>
@@ -186,21 +170,16 @@ export default function HelpPage() {
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Average response time: 2 hours • support@emailpro.com
+                Average response time: 2 hours • support@validink.io
               </p>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="border-t mt-12">
-        <div className="container py-8">
-          <p className="text-center text-sm text-muted-foreground">
-            © 2025 EmailPro. All rights reserved.
-          </p>
-        </div>
-      </footer>
+      </main>
+
+      <Footer />
     </div>
   );
 }

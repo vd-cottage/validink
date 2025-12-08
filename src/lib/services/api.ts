@@ -13,6 +13,15 @@ export const api = axios.create({
 // Request interceptor removed - handled by AxiosTokenProvider
 
 // Handle response errors
+// Use a separate instance for public requests to avoid 401 redirects
+export const publicApi = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
+
+// Handle response errors (ONLY for authenticated api instance)
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -59,7 +68,7 @@ export const apiService = {
   },
   validation: {
     comprehensive: (email: string) =>
-      api.post(API_ROUTES.VALIDATION.COMPREHENSIVE, { email }),
+      publicApi.post(API_ROUTES.VALIDATION.COMPREHENSIVE, { email }),
     syntax: (email: string) =>
       api.post(API_ROUTES.VALIDATION.SYNTAX, { email }),
     domain: (email: string) =>

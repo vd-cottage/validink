@@ -1,7 +1,21 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { BookOpen, Code, Zap, Shield, Globe, Settings } from 'lucide-react';
+import { BookOpen, Code, Zap, Shield } from 'lucide-react';
+import { Navbar } from '@/components/marketing/navbar';
+import { Footer } from '@/components/marketing/footer';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'API Documentation - ValidInk Email Validation',
+  description: 'Complete API documentation for ValidInk email validation. Learn how to integrate email verification into your applications with Node.js, Python, and PHP examples.',
+  keywords: 'email validation API, email verification documentation, REST API, email checker API, bulk email validation API',
+  openGraph: {
+    title: 'API Documentation - ValidInk',
+    description: 'Complete API documentation for integrating email validation into your applications.',
+    url: 'https://validink.com/docs',
+  },
+};
 
 export default function DocsPage() {
   const sections = [
@@ -48,28 +62,11 @@ export default function DocsPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center justify-between">
-          <Link href="/" className="flex items-center space-x-2">
-            <span className="text-2xl font-bold text-primary">EmailPro</span>
-          </Link>
-          <nav className="flex items-center space-x-6">
-            <Link href="/docs" className="text-sm font-medium">
-              Docs
-            </Link>
-            <Link href="/login">
-              <Button variant="ghost">Sign in</Button>
-            </Link>
-            <Link href="/register">
-              <Button>Get Started</Button>
-            </Link>
-          </nav>
-        </div>
-      </header>
+    <div className="flex min-h-screen flex-col bg-background">
+      <Navbar />
 
-      <div className="container py-12">
+      <main className="flex-1">
+        <div className="container py-12 px-4 sm:px-6">
         {/* Hero */}
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Documentation</h1>
@@ -134,7 +131,7 @@ export default function DocsPage() {
             <div className="space-y-4">
               <h3 className="text-xl font-semibold" id="first-validation">3. Validate Your First Email</h3>
               <pre className="bg-muted p-4 rounded-lg overflow-x-auto">
-                <code className="text-sm">{`curl -X POST https://api.emailpro.com/api/v1/validate/comprehensive \\
+                <code className="text-sm">{`curl -X POST https://api.validink.io/api/v1/validate/comprehensive \\
   -H "Authorization: Bearer YOUR_API_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{"email": "test@example.com"}'`}</code>
@@ -212,7 +209,7 @@ const email = 'test@example.com';
 async function validateEmail(email) {
   try {
     const response = await axios.post(
-      'https://api.emailpro.com/api/v1/validate/comprehensive',
+      'https://api.validink.io/api/v1/validate/comprehensive',
       { email },
       {
         headers: {
@@ -241,7 +238,7 @@ api_key = 'YOUR_API_KEY'
 email = 'test@example.com'
 
 def validate_email(email):
-    url = 'https://api.emailpro.com/api/v1/validate/comprehensive'
+    url = 'https://api.validink.io/api/v1/validate/comprehensive'
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json'
@@ -264,7 +261,7 @@ print(result)`}</code>
 $apiKey = 'YOUR_API_KEY';
 $email = 'test@example.com';
 
-$ch = curl_init('https://api.emailpro.com/api/v1/validate/comprehensive');
+$ch = curl_init('https://api.validink.io/api/v1/validate/comprehensive');
 curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_POST, true);
 curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -318,16 +315,10 @@ print_r($result);`}</code>
             </div>
           </section>
         </div>
-      </div>
-
-      {/* Footer */}
-      <footer className="border-t mt-12">
-        <div className="container py-8">
-          <p className="text-center text-sm text-muted-foreground">
-            © 2025 EmailPro. All rights reserved.
-          </p>
         </div>
-      </footer>
+      </main>
+
+      <Footer />
     </div>
   );
 }

@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
-import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Loader2, ArrowLeft, Mail, KeyRound, Lock, CheckCircle2, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { apiService } from '@/lib/services/api';
+import { Navbar } from '@/components/marketing/navbar';
 
 export default function ForgotPasswordPage() {
     const router = useRouter();
@@ -76,9 +77,11 @@ export default function ForgotPasswordPage() {
     }
 
     return (
-        <div className="w-full lg:grid lg:min-h-screen lg:grid-cols-2 xl:min-h-screen">
-            <div className="flex items-center justify-center py-12">
-                <div className="mx-auto w-[350px] space-y-6">
+        <div className="flex min-h-screen flex-col">
+            <Navbar />
+            <div className="flex-1 w-full lg:grid lg:grid-cols-2">
+                <div className="flex items-center justify-center py-8 sm:py-12 px-4 min-h-[calc(100vh-4rem)] lg:min-h-0">
+                    <div className="w-full max-w-[350px] space-y-6">
                     <div className="flex flex-col space-y-2 text-center">
                         <h1 className="text-3xl font-bold tracking-tighter">Reset Password</h1>
                         <p className="text-muted-foreground">
@@ -231,5 +234,6 @@ export default function ForgotPasswordPage() {
                 </div>
             </div>
         </div>
+    </div>
     );
 }

@@ -77,15 +77,15 @@ export default function ValidatePage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight">Email Validation</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">Email Validation</h2>
+        <p className="text-sm sm:text-base text-muted-foreground">
           Real-time email verification with syntax checks, domain analysis, and SMTP verification
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         {/* Input Section */}
         <div className="lg:col-span-1 space-y-6">
           <Card>
@@ -158,16 +158,16 @@ export default function ValidatePage() {
               {/* Main Score Card */}
               <Card className="border-t-4 border-t-primary">
                 <CardContent className="pt-6">
-                  <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div className="flex items-center gap-4">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
+                    <div className="flex items-center gap-3 sm:gap-4">
                       <div className={`
-                          h-16 w-16 rounded-full flex items-center justify-center text-2xl font-bold
+                          h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold
                           ${result.is_valid ? 'bg-success/10 text-success ring-2 ring-success/20' : 'bg-destructive/10 text-destructive ring-2 ring-destructive/20'}
                         `}>
                         {result.score || result.deliverability?.deliverability_score || (result.is_valid ? 100 : 0)}
                       </div>
                       <div>
-                        <h3 className="text-2xl font-bold">{result.email}</h3>
+                        <h3 className="text-lg sm:text-2xl font-bold break-all">{result.email}</h3>
                         <div className="flex items-center gap-2 mt-1">
                           <span className={`px-2 py-0.5 rounded text-xs font-semibold uppercase ${result.is_valid ? 'bg-success/20 text-success' : 'bg-destructive/20 text-destructive'}`}>
                             {result.is_valid ? 'Valid' : 'Invalid'}
@@ -179,7 +179,7 @@ export default function ValidatePage() {
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="text-center sm:text-right">
                       <div className="text-sm text-muted-foreground">Deliverability</div>
                       <div className={`font-medium ${
                         (typeof result.deliverability === 'object'
@@ -198,7 +198,7 @@ export default function ValidatePage() {
               </Card>
 
               {/* Detailed Checks Grid */}
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
                 {/* Format Validation */}
                 <Card>
                   <CardHeader className="pb-3">

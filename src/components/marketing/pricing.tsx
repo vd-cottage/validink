@@ -56,17 +56,17 @@ export function PricingSection() {
   const router = useRouter();
 
   return (
-    <section id="pricing" className="py-24 bg-muted/50">
-      <div className="container">
+    <section id="pricing" className="py-12 sm:py-24 bg-muted/50">
+      <div className="container px-4 sm:px-6">
         <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight md:text-4xl">
             Simple, transparent pricing
           </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
+          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground">
             Choose the plan that&apos;s right for you
           </p>
         </div>
-        <div className="mt-16 grid gap-8 md:grid-cols-3">
+        <div className="mt-10 sm:mt-16 grid gap-6 sm:gap-8 md:grid-cols-3">
           {plans.map((plan) => (
             <Card
               key={plan.name}

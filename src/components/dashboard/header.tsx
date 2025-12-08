@@ -7,8 +7,13 @@ import { UserNav } from './user-nav';
 import { NotificationsDropdown } from './notifications-dropdown';
 import { useDashboardStore } from '@/lib/stores/dashboardStore';
 import { useEffect } from 'react';
+import { Menu } from 'lucide-react';
 
-export function DashboardHeader() {
+interface DashboardHeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
   const { data: session } = useSession();
   const { stats, fetchStats } = useDashboardStore();
 
@@ -17,17 +22,31 @@ export function DashboardHeader() {
   }, [fetchStats]);
 
   return (
-    <header className="flex h-16 items-center justify-between border-b bg-card px-6">
-      <div className="flex items-center space-x-4">
-        <h1 className="text-xl font-semibold">
-          Welcome back, {session?.user?.name || 'User'}
+    <header className="flex h-16 items-center justify-between border-b bg-card px-4 sm:px-6">
+      <div className="flex items-center space-x-3 sm:space-x-4">
+        {/* Mobile menu button */}
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-md hover:bg-muted"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
+        <h1 className="text-base sm:text-xl font-semibold truncate max-w-[150px] sm:max-w-none">
+          Welcome, {session?.user?.name || 'User'}
         </h1>
       </div>
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2 rounded-lg bg-muted px-4 py-2">
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        <div className="hidden sm:flex items-center space-x-2 rounded-lg bg-muted px-3 sm:px-4 py-2">
           <CreditCard className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium">
             {(stats as any)?.credits?.remaining ?? session?.user?.credits ?? 0} credits
+          </span>
+        </div>
+        {/* Show compact credits on mobile */}
+        <div className="sm:hidden flex items-center space-x-1 rounded-lg bg-muted px-2 py-1.5">
+          <CreditCard className="h-3 w-3 text-muted-foreground" />
+          <span className="text-xs font-medium">
+            {(stats as any)?.credits?.remaining ?? session?.user?.credits ?? 0}
           </span>
         </div>
         <ThemeToggle />
