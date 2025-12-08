@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Link from 'next/link';
 import { Mail, User, Lock, ArrowRight, Loader2, Sparkles, KeyRound, Eye, EyeOff } from 'lucide-react';
-import axios from 'axios';
+import { apiService } from '@/lib/services/api';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -35,7 +35,7 @@ export default function RegisterPage() {
 
     try {
       // Re-initiate registration to send a new OTP
-      const response = await axios.post('/api/v1/auth/register/initiate', {
+      const response = await apiService.auth.initiateRegister({
         email: emailVal,
         password: password,
         name: name
@@ -93,7 +93,7 @@ export default function RegisterPage() {
     try {
       console.log('Sending request to /api/v1/auth/register/initiate');
       // Fix: Send all required fields
-      const response = await axios.post('/api/v1/auth/register/initiate', {
+      const response = await apiService.auth.initiateRegister({
         email: emailVal,
         password: password,
         name: name
@@ -129,7 +129,7 @@ export default function RegisterPage() {
     const otp = verifyData.get('otp') as string;
 
     try {
-      await axios.post('/api/v1/auth/register/verify', {
+      await apiService.auth.verifyRegister({
         email,
         otp
       });

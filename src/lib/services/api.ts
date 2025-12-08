@@ -40,6 +40,13 @@ export const apiService = {
       // Token is now handled by NextAuth, not localStorage
       return response;
     },
+    // New methods for 2-step registration
+    initiateRegister: async (data: { email: string; password: string; name: string }) => {
+      return api.post(API_ROUTES.AUTH.REGISTER_INITIATE, data);
+    },
+    verifyRegister: async (data: { email: string; otp: string }) => {
+      return api.post(API_ROUTES.AUTH.REGISTER_VERIFY, data);
+    },
     logout: () => {
       // Logout is now handled by NextAuth signOut
     },
