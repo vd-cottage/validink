@@ -73,9 +73,8 @@ export default function HistoryPage() {
   const getTypeBadge = (type: string) => {
     const isFast = type === 'fast';
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${
-        isFast ? 'bg-blue-500/20 text-blue-500' : 'bg-purple-500/20 text-purple-500'
-      }`}>
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${isFast ? 'bg-blue-500/20 text-blue-500' : 'bg-purple-500/20 text-purple-500'
+        }`}>
         {isFast ? <Zap className="h-3 w-3" /> : <Shield className="h-3 w-3" />}
         {isFast ? 'Fast' : 'Deep'}
       </span>
@@ -236,9 +235,8 @@ export default function HistoryPage() {
               {filteredActivity.map((activity) => (
                 <div
                   key={activity.id}
-                  className={`border rounded-lg transition-all ${
-                    expandedId === activity.id ? 'ring-2 ring-primary/20' : ''
-                  }`}
+                  className={`border rounded-lg transition-all ${expandedId === activity.id ? 'ring-2 ring-primary/20' : ''
+                    }`}
                 >
                   {/* Main Row - Always Visible */}
                   <div
@@ -267,13 +265,12 @@ export default function HistoryPage() {
 
                       {/* Status Badge */}
                       <span
-                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
-                          activity.status === 'success'
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${activity.status === 'success'
                             ? 'bg-success/10 text-success'
                             : activity.status === 'error' || activity.status === 'invalid'
-                            ? 'bg-destructive/10 text-destructive'
-                            : 'bg-yellow-500/10 text-yellow-500'
-                        }`}
+                              ? 'bg-destructive/10 text-destructive'
+                              : 'bg-yellow-500/10 text-yellow-500'
+                          }`}
                       >
                         {activity.status}
                       </span>
@@ -350,13 +347,12 @@ export default function HistoryPage() {
                         {/* Status */}
                         <div className="space-y-1">
                           <p className="text-xs text-muted-foreground uppercase font-medium">Status</p>
-                          <span className={`inline-flex items-center gap-1 text-sm font-medium ${
-                            activity.status === 'success' ? 'text-success' :
-                            activity.status === 'error' ? 'text-destructive' : 'text-yellow-500'
-                          }`}>
+                          <span className={`inline-flex items-center gap-1 text-sm font-medium ${activity.status === 'success' ? 'text-success' :
+                              activity.status === 'error' ? 'text-destructive' : 'text-yellow-500'
+                            }`}>
                             {activity.status === 'success' ? <CheckCircle className="h-4 w-4" /> :
-                             activity.status === 'error' ? <XCircle className="h-4 w-4" /> :
-                             <AlertTriangle className="h-4 w-4" />}
+                              activity.status === 'error' ? <XCircle className="h-4 w-4" /> :
+                                <AlertTriangle className="h-4 w-4" />}
                             {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
                           </span>
                         </div>
@@ -377,7 +373,7 @@ export default function HistoryPage() {
                               <p className="text-sm font-medium text-destructive">Score Unavailable</p>
                               <p className="text-xs text-destructive/80 mt-1">
                                 This validation returned a score of 0. This typically occurs with deep/comprehensive analysis
-                                when additional checks couldn't be completed. Consider using Fast validation for quick scoring.
+                                when additional checks couldn&apos;t be completed. Consider using Fast validation for quick scoring.
                               </p>
                             </div>
                           </div>

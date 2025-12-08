@@ -42,10 +42,17 @@ interface Analytics {
 }
 
 interface RecentActivity {
-  id: number;
+  id: string;
   email: string;
   status: string;
   timestamp: string;
+  type?: string;
+  validation_type?: string;
+  credits_used?: number;
+  processing_time?: number;
+  score?: number;
+  quality?: string;
+  risk_level?: string;
 }
 
 interface DashboardState {
@@ -95,8 +102,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     try {
       const response = await apiService.dashboard.getRecent();
       // Extract data array from response (API returns { success: true, data: [] })
-      const recentActivity = Array.isArray(response?.data) ? response.data : 
-                             Array.isArray(response) ? response : [];
+      const recentActivity = Array.isArray(response?.data) ? response.data :
+        Array.isArray(response) ? response : [];
       set({ recentActivity, error: null });
     } catch (error: any) {
       set({ error: error.message });
