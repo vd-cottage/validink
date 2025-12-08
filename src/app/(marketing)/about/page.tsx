@@ -12,6 +12,14 @@ export const metadata: Metadata = {
     title: 'About ValidInk - Email Validation Service',
     description: 'We help businesses maintain clean, deliverable email lists and improve email marketing success.',
     url: 'https://validink.com/about',
+    images: [
+      {
+        url: '/og-about.png',
+        width: 1200,
+        height: 630,
+        alt: 'About ValidInk',
+      },
+    ],
   },
 };
 

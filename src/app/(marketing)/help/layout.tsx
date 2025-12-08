@@ -8,6 +8,14 @@ export const metadata: Metadata = {
     title: 'Help Center - ValidInk',
     description: 'Find answers to common questions about email validation and get support.',
     url: 'https://validink.com/help',
+    images: [
+      {
+        url: '/og-help.png',
+        width: 1200,
+        height: 630,
+        alt: 'ValidInk Help Center',
+      },
+    ],
   },
 };
 

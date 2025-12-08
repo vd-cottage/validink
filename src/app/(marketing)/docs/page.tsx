@@ -14,6 +14,14 @@ export const metadata: Metadata = {
     title: 'API Documentation - ValidInk',
     description: 'Complete API documentation for integrating email validation into your applications.',
     url: 'https://validink.com/docs',
+    images: [
+      {
+        url: '/og-docs.png',
+        width: 1200,
+        height: 630,
+        alt: 'ValidInk API Documentation',
+      },
+    ],
   },
 };
 
