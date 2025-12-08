@@ -1,0 +1,1149 @@
+'use client';
+
+import { Suspense, useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { User, Key, Bell, Shield, Webhook, CreditCard, Copy, Plus, Trash2, RefreshCw, Download, Check, X } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
+import { apiService } from '@/lib/services/api';
+import { Switch } from '@/components/ui/switch';
+
+import { useRouter, useSearchParams } from 'next/navigation';
+
+function SettingsContent() {
+  const { data: session } = useSession();
+  const toast = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'account';
+
+  const handleTabChange = (value: string) => {
+    router.push(`/dashboard/settings?tab=${value}`);
+  };
+
+  // Profile state
+  const [profile, setProfile] = useState<any>(null);
+  const [profileForm, setProfileForm] = useState({ name: '', company: '' });
+
+  // API Keys state
+  const [apiKeys, setApiKeys] = useState<any[]>([]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [showNewKeyDialog, setShowNewKeyDialog] = useState(false);
+
+  // Webhooks state
+  const [webhooks, setWebhooks] = useState<any[]>([]);
+  const [newWebhookUrl, setNewWebhookUrl] = useState('');
+  const [newWebhookName, setNewWebhookName] = useState('');
+  const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
+  const [showNewWebhookDialog, setShowNewWebhookDialog] = useState(false);
+
+  // Billing state
+  const [billingInfo, setbillingInfo] = useState<any>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+
+
+  // Notifications state
+  const [notifications, setNotifications] = useState<any>({
+    email_notifications: true,
+    low_credit_alerts: true,
+    bulk_job_completion: true,
+    weekly_report: false,
+    marketing_emails: false
+  });
+
+  // 2FA state
+  const [twoFactorStatus, setTwoFactorStatus] = useState<any>(null);
+  const [qrCode, setQrCode] = useState<string | null>(null);
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [twoFactorCode, setTwoFactorCode] = useState('');
+
+  // Password state
+  const [passwordForm, setPasswordForm] = useState({
+    new_password: '',
+    confirm_password: ''
+  });
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+
+  // Loading states
+  const [loading, setLoading] = useState({
+    profile: false,
+    apiKeys: false,
+    webhooks: false,
+    billing: false,
+    notifications: false,
+    twoFactor: false
+  });
+
+  // State for Disable 2FA Form
+  const [showDisable2FAForm, setShowDisable2FAForm] = useState(false);
+  const [disable2FAForm, setDisable2FAForm] = useState({ code: '', password: '' });
+
+  // Available webhook events
+  const AVAILABLE_EVENTS = [
+    'validation.completed',
+    'bulk.completed',
+    'credit.low',
+    'credit.depleted'
+  ];
+
+  // Load data on mount
+  useEffect(() => {
+    loadProfile();
+    loadApiKeys();
+    loadWebhooks();
+    loadBillingInfo();
+    loadNotifications();
+    loadTwoFactorStatus();
+  }, []);
+
+  // Profile functions
+  const loadProfile = async () => {
+    try {
+      const response = await apiService.user.getProfile();
+      setProfile(response.data.data);
+      setProfileForm({
+        name: response.data.data.name || '',
+        company: response.data.data.company || ''
+      });
+    } catch (error) {
+      console.error('Failed to load profile:', error);
+    }
+  };
+
+  const updateProfile = async () => {
+    setLoading(prev => ({ ...prev, profile: true }));
+    try {
+      await apiService.user.updateProfile(profileForm);
+      toast.success('Profile updated successfully');
+      loadProfile();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update profile');
+    } finally {
+      setLoading(prev => ({ ...prev, profile: false }));
+    }
+  };
+
+  const requestOtp = async () => {
+    setLoading(prev => ({ ...prev, profile: true }));
+    try {
+      await apiService.user.requestPasswordChangeOtp();
+      toast.success(`OTP sent to ${session?.user?.email}`);
+      setOtpSent(true);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setLoading(prev => ({ ...prev, profile: false }));
+    }
+  };
+
+  const changePassword = async () => {
+    if (passwordForm.new_password !== passwordForm.confirm_password) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (!otpCode || otpCode.length !== 6) {
+      toast.error('Please enter a valid 6-digit OTP');
+      return;
+    }
+
+    setLoading(prev => ({ ...prev, profile: true }));
+    try {
+      await apiService.user.changePasswordWithOtp({
+        otp: otpCode,
+        new_password: passwordForm.new_password,
+        confirm_password: passwordForm.confirm_password
+      });
+      toast.success('Password changed successfully');
+      setPasswordForm({ new_password: '', confirm_password: '' });
+      setOtpSent(false);
+      setOtpCode('');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setLoading(prev => ({ ...prev, profile: false }));
+    }
+  };
+
+  const deleteAccount = async () => {
+    if (!confirm('Are you sure you want to delete your account? This action cannot be undone.')) {
+      return;
+    }
+    const password = prompt('Enter your password to confirm:');
+    if (!password) return;
+
+    try {
+      await apiService.user.deleteAccount({ password });
+      toast.success('Account deleted successfully');
+      localStorage.removeItem('authToken');
+      window.location.href = '/';
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete account');
+    }
+  };
+
+  // API Keys functions
+  const loadApiKeys = async () => {
+    setLoading(prev => ({ ...prev, apiKeys: true }));
+    try {
+      const response = await apiService.apiKeys.list();
+      setApiKeys(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load API keys:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, apiKeys: false }));
+    }
+  };
+
+  const createApiKey = async () => {
+    if (!newKeyName.trim()) {
+      toast.error('Please enter a name for the API key');
+      return;
+    }
+    try {
+      const response = await apiService.apiKeys.create({ name: newKeyName });
+      toast.success('API key created successfully');
+      setNewKeyName('');
+      setShowNewKeyDialog(false);
+      loadApiKeys();
+      // Show the full key (only visible once)
+      if (response.data.data.key) {
+        alert(`Your new API key (save it now, you won't see it again):\n\n${response.data.data.key}`);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create API key');
+    }
+  };
+
+  const regenerateApiKey = async (id: string) => {
+    if (!confirm('Are you sure you want to regenerate this API key? The old key will stop working immediately.')) {
+      return;
+    }
+    try {
+      const response = await apiService.apiKeys.regenerate(id);
+      toast.success('API key regenerated successfully');
+      loadApiKeys();
+      if (response.data.data.key) {
+        alert(`Your new API key (save it now):\n\n${response.data.data.key}`);
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to regenerate API key');
+    }
+  };
+
+  const deleteApiKey = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this API key?')) {
+      return;
+    }
+    try {
+      await apiService.apiKeys.delete(id);
+      toast.success('API key deleted successfully');
+      loadApiKeys();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete API key');
+    }
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Copied to clipboard!');
+  };
+
+  // Webhooks functions
+  const loadWebhooks = async () => {
+    setLoading(prev => ({ ...prev, webhooks: true }));
+    try {
+      const response = await apiService.webhooks.list();
+      setWebhooks(response.data.data || []);
+    } catch (error) {
+      console.error('Failed to load webhooks:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, webhooks: false }));
+    }
+  };
+
+  const createWebhook = async () => {
+    if (!newWebhookUrl.trim() || selectedEvents.length === 0) {
+      toast.error('Please enter a URL and select at least one event');
+      return;
+    }
+    try {
+      await apiService.webhooks.create({
+        url: newWebhookUrl,
+        events: selectedEvents,
+        name: newWebhookName || undefined
+      });
+      toast.success('Webhook created successfully');
+      setNewWebhookUrl('');
+      setNewWebhookName('');
+      setSelectedEvents([]);
+      setShowNewWebhookDialog(false);
+      loadWebhooks();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to create webhook');
+    }
+  };
+
+  const testWebhook = async (id: string) => {
+    try {
+      await apiService.webhooks.test(id);
+      toast.success('Test webhook sent successfully');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to send test webhook');
+    }
+  };
+
+  const deleteWebhook = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this webhook?')) {
+      return;
+    }
+    try {
+      await apiService.webhooks.delete(id);
+      toast.success('Webhook deleted successfully');
+      loadWebhooks();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to delete webhook');
+    }
+  };
+
+  const toggleWebhook = async (id: string, currentStatus: boolean) => {
+    try {
+      await apiService.webhooks.update(id, { is_active: !currentStatus });
+      toast.success(`Webhook ${!currentStatus ? 'enabled' : 'disabled'}`);
+      loadWebhooks();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update webhook');
+    }
+  };
+
+  // Billing functions
+  const loadBillingInfo = async () => {
+    setLoading(prev => ({ ...prev, billing: true }));
+    try {
+      const [infoResponse, plansResponse, invoicesResponse] = await Promise.all([
+        apiService.billing.getInfo(),
+        apiService.billing.getPlans(),
+        apiService.billing.getInvoices()
+      ]);
+      setbillingInfo(infoResponse.data.data);
+      setPlans(plansResponse.data.data || []);
+      setInvoices(invoicesResponse.data.data?.invoices || []);
+    } catch (error) {
+      console.error('Failed to load billing info:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, billing: false }));
+    }
+  };
+
+  const downloadInvoice = async (id: string) => {
+    try {
+      const response = await apiService.billing.downloadInvoice(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `invoice-${id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Invoice downloaded');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to download invoice');
+    }
+  };
+
+  const cancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel your subscription?')) {
+      return;
+    }
+    try {
+      await apiService.billing.cancelSubscription();
+      toast.success('Subscription cancelled');
+      loadBillingInfo();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to cancel subscription');
+    }
+  };
+
+  const changePlan = async (planId: string) => {
+    if (!confirm('Are you sure you want to change your plan?')) {
+      return;
+    }
+    setLoading(prev => ({ ...prev, billing: true }));
+    try {
+      await apiService.billing.changePlan({ plan_id: planId });
+      toast.success('Plan changed successfully');
+      loadBillingInfo();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to change plan');
+    } finally {
+      setLoading(prev => ({ ...prev, billing: false }));
+    }
+  };
+
+  // Notifications functions
+  const loadNotifications = async () => {
+    setLoading(prev => ({ ...prev, notifications: true }));
+    try {
+      const response = await apiService.user.getNotifications();
+      setNotifications(response.data.data);
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, notifications: false }));
+    }
+  };
+
+  const updateNotificationPref = async (key: string, value: boolean) => {
+    try {
+      await apiService.user.updateNotifications({ [key]: value });
+      setNotifications({ ...notifications, [key]: value });
+      toast.success('Notification preferences updated');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update preferences');
+    }
+  };
+
+  // Two-Factor Auth functions
+  const loadTwoFactorStatus = async () => {
+    setLoading(prev => ({ ...prev, twoFactor: true }));
+    try {
+      const response = await apiService.user.twoFactor.getStatus();
+      setTwoFactorStatus(response.data.data);
+    } catch (error) {
+      console.error('Failed to load 2FA status:', error);
+    } finally {
+      setLoading(prev => ({ ...prev, twoFactor: false }));
+    }
+  };
+
+  const enable2FA = async () => {
+    setLoading(prev => ({ ...prev, twoFactor: true }));
+    try {
+      const response = await apiService.user.twoFactor.enable();
+      setQrCode(response.data.data.qr_code);
+      setBackupCodes(response.data.data.backup_codes);
+      toast.success('Scan the QR code with your authenticator app');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to enable 2FA');
+    } finally {
+      setLoading(prev => ({ ...prev, twoFactor: false }));
+    }
+  };
+
+  const verify2FA = async () => {
+    if (!twoFactorCode.trim()) {
+      toast.error('Please enter the verification code');
+      return;
+    }
+    setLoading(prev => ({ ...prev, twoFactor: true }));
+    try {
+      await apiService.user.twoFactor.verify({ code: twoFactorCode });
+      toast.success('Two-factor authentication enabled successfully');
+      setQrCode(null);
+      setBackupCodes([]);
+      setTwoFactorCode('');
+      loadTwoFactorStatus();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Invalid verification code');
+    } finally {
+      setLoading(prev => ({ ...prev, twoFactor: false }));
+    }
+  };
+
+  /* disable2FA removed temporarily */
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Settings</h2>
+        <p className="text-muted-foreground">
+          Manage your account settings and preferences
+        </p>
+      </div>
+
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full grid-cols-6">
+          <TabsTrigger value="account">
+            <User className="h-4 w-4 mr-2" />
+            Account
+          </TabsTrigger>
+          <TabsTrigger value="api-keys">
+            <Key className="h-4 w-4 mr-2" />
+            API Keys
+          </TabsTrigger>
+          <TabsTrigger value="webhooks">
+            <Webhook className="h-4 w-4 mr-2" />
+            Webhooks
+          </TabsTrigger>
+          <TabsTrigger value="billing">
+            <CreditCard className="h-4 w-4 mr-2" />
+            Billing
+          </TabsTrigger>
+          <TabsTrigger value="notifications">
+            <Bell className="h-4 w-4 mr-2" />
+            Notifications
+          </TabsTrigger>
+          <TabsTrigger value="security">
+            <Shield className="h-4 w-4 mr-2" />
+            Security
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Account Tab */}
+        <TabsContent value="account" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile Information</CardTitle>
+              <CardDescription>Update your account details</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={profileForm.name}
+                  onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={profile?.email || session?.user?.email} disabled />
+                <p className="text-xs text-muted-foreground">Email cannot be changed</p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="company">Company (Optional)</Label>
+                <Input
+                  id="company"
+                  value={profileForm.company}
+                  onChange={(e) => setProfileForm({ ...profileForm, company: e.target.value })}
+                  placeholder="Your company name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Credits</Label>
+                <p className="text-2xl font-bold">{profile?.credits || 0}</p>
+              </div>
+              <Button onClick={updateProfile} disabled={loading.profile}>
+                {loading.profile ? 'Saving...' : 'Save Changes'}
+              </Button>
+              <Button variant="destructive" className="ml-2" onClick={deleteAccount}>
+                Delete Account
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* API Keys Tab */}
+        <TabsContent value="api-keys" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>API Keys</CardTitle>
+              <CardDescription>Manage your API keys for integration</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading.apiKeys ? (
+                <p>Loading...</p>
+              ) : apiKeys.length === 0 ? (
+                <p className="text-muted-foreground">No API keys yet. Create one to get started.</p>
+              ) : (
+                <div className="space-y-4">
+                  {apiKeys.map((key) => (
+                    <div key={key.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">{key.name}</p>
+                        <p className="text-sm text-muted-foreground font-mono mt-1">{key.key_prefix}••••••••••••••••••</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Created: {new Date(key.created_at).toLocaleDateString()} •
+                          Last used: {key.last_used_at ? new Date(key.last_used_at).toLocaleDateString() : 'Never'} •
+                          Status: <span className={key.is_active ? 'text-green-600' : 'text-gray-600'}>{key.status}</span>
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => regenerateApiKey(key.id)}
+                          title="Regenerate"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteApiKey(key.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {showNewKeyDialog ? (
+                <div className="space-y-4 border p-4 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="newKeyName">Key Name</Label>
+                    <Input
+                      id="newKeyName"
+                      value={newKeyName}
+                      onChange={(e) => setNewKeyName(e.target.value)}
+                      placeholder="e.g., Production API Key"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={createApiKey}>Create Key</Button>
+                    <Button variant="outline" onClick={() => setShowNewKeyDialog(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={() => setShowNewKeyDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />Create New API Key
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Webhooks Tab */}
+        <TabsContent value="webhooks" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Webhooks</CardTitle>
+              <CardDescription>Configure webhook endpoints for async notifications</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading.webhooks ? (
+                <p>Loading...</p>
+              ) : webhooks.length === 0 ? (
+                <p className="text-muted-foreground">No webhooks configured yet.</p>
+              ) : (
+                webhooks.map((webhook) => (
+                  <div key={webhook.id} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex-1">
+                      <p className="font-medium">{webhook.name || 'Unnamed Webhook'}</p>
+                      <p className="text-sm text-muted-foreground mt-1">{webhook.url}</p>
+                      <p className="text-sm text-muted-foreground mt-1">Events: {webhook.events.join(', ')}</p>
+                      <span className={`inline - flex items - center rounded - full px - 2 py - 1 text - xs mt - 2 ${webhook.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        } `}>
+                        {webhook.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleWebhook(webhook.id, webhook.is_active)}
+                      >
+                        {webhook.is_active ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => testWebhook(webhook.id)}>Test</Button>
+                      <Button variant="destructive" size="sm" onClick={() => deleteWebhook(webhook.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              )}
+
+              {showNewWebhookDialog ? (
+                <div className="space-y-4 border p-4 rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="webhookName">Name (Optional)</Label>
+                    <Input
+                      id="webhookName"
+                      value={newWebhookName}
+                      onChange={(e) => setNewWebhookName(e.target.value)}
+                      placeholder="My Webhook"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="webhookUrl">Webhook URL</Label>
+                    <Input
+                      id="webhookUrl"
+                      value={newWebhookUrl}
+                      onChange={(e) => setNewWebhookUrl(e.target.value)}
+                      placeholder="https://example.com/webhook"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Events</Label>
+                    {AVAILABLE_EVENTS.map((event) => (
+                      <div key={event} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={event}
+                          checked={selectedEvents.includes(event)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedEvents([...selectedEvents, event]);
+                            } else {
+                              setSelectedEvents(selectedEvents.filter(e => e !== event));
+                            }
+                          }}
+                        />
+                        <Label htmlFor={event}>{event}</Label>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={createWebhook}>Create Webhook</Button>
+                    <Button variant="outline" onClick={() => setShowNewWebhookDialog(false)}>Cancel</Button>
+                  </div>
+                </div>
+              ) : (
+                <Button onClick={() => setShowNewWebhookDialog(true)}>
+                  <Plus className="h-4 w-4 mr-2" />Add Webhook
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Available Events</CardTitle>
+              <CardDescription>Events you can subscribe to</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-2 text-sm">
+                {AVAILABLE_EVENTS.map((event) => (
+                  <li key={event}>• <code>{event}</code></li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Billing Tab */}
+        <TabsContent value="billing" className="space-y-4">
+          {loading.billing ? (
+            <Card>
+              <CardContent className="p-6">Loading...</CardContent>
+            </Card>
+          ) : (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Billing Information</CardTitle>
+                  <CardDescription>Manage your billing details and invoices</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Current Plan</Label>
+                    <p className="text-2xl font-bold">{billingInfo?.plan?.name || 'Free'}</p>
+                    {billingInfo?.subscription && (
+                      <p className="text-sm text-muted-foreground">
+                        ${billingInfo.subscription.amount}/month •
+                        Renews on {new Date(billingInfo.subscription.current_period_end).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  {billingInfo?.subscription?.status !== 'cancelled' && billingInfo?.plan?.name !== 'Free' && (
+                    <Button variant="outline" onClick={cancelSubscription}>
+                      Cancel Subscription
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Available Plans</CardTitle>
+                  <CardDescription>Upgrade your plan to unlock more features</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                    {plans.map((plan: any) => (
+                      <div key={plan.id} className={`flex flex - col p - 4 border rounded - lg ${plan.current ? 'border-primary bg-primary/5' : ''} `}>
+                        <div className="mb-4">
+                          <h3 className="font-bold text-lg">{plan.name}</h3>
+                          <div className="text-2xl font-bold mt-2">
+                            ${plan.price}<span className="text-sm font-normal text-muted-foreground">/mo</span>
+                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {plan.credits.toLocaleString()} credits / month
+                          </p>
+                        </div>
+                        <ul className="space-y-2 mb-6 flex-1 text-sm">
+                          {plan.features.map((feature: string, i: number) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <Check className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                              <span className="text-muted-foreground">{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <Button
+                          variant={plan.current ? "outline" : "default"}
+                          disabled={plan.current || loading.billing}
+                          onClick={() => !plan.current && changePlan(plan.id)}
+                          className="w-full"
+                        >
+                          {plan.current ? 'Current Plan' : 'Select Plan'}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {billingInfo?.payment_method && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Payment Method</CardTitle>
+                    <CardDescription>Manage your payment methods</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <CreditCard className="h-6 w-6" />
+                        <div>
+                          <p className="font-medium">{billingInfo.payment_method.brand} •••• {billingInfo.payment_method.last4}</p>
+                          <p className="text-sm text-muted-foreground">
+                            Expires {billingInfo.payment_method.exp_month}/{billingInfo.payment_method.exp_year}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Invoice History</CardTitle>
+                  <CardDescription>Download your past invoices</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {invoices.length === 0 ? (
+                    <p className="text-muted-foreground">No invoices yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {invoices.map((invoice) => (
+                        <div key={invoice.id} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div>
+                            <p className="font-medium">{new Date(invoice.created_at).toLocaleDateString()}</p>
+                            <p className="text-sm text-muted-foreground">${invoice.amount}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className={`text - sm ${invoice.status === 'paid' ? 'text-green-600' : 'text-yellow-600'} `}>
+                              {invoice.status}
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadInvoice(invoice.id)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          )}
+        </TabsContent>
+
+        {/* Notifications Tab */}
+        <TabsContent value="notifications" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Notification Preferences</CardTitle>
+              <CardDescription>Configure your notification preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loading.notifications ? (
+                <p>Loading...</p>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Email Notifications</p>
+                      <p className="text-sm text-muted-foreground">Receive email updates about your account</p>
+                    </div>
+                    <Switch
+                      checked={notifications.email_notifications}
+                      onCheckedChange={(checked: boolean) => updateNotificationPref('email_notifications', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Low Credit Alerts</p>
+                      <p className="text-sm text-muted-foreground">Get notified when credits are running low</p>
+                    </div>
+                    <Switch
+                      checked={notifications.low_credit_alerts}
+                      onCheckedChange={(checked: boolean) => updateNotificationPref('low_credit_alerts', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Bulk Job Completion</p>
+                      <p className="text-sm text-muted-foreground">Notify when bulk validation jobs complete</p>
+                    </div>
+                    <Switch
+                      checked={notifications.bulk_job_completion}
+                      onCheckedChange={(checked: boolean) => updateNotificationPref('bulk_job_completion', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Weekly Reports</p>
+                      <p className="text-sm text-muted-foreground">Receive weekly usage reports</p>
+                    </div>
+                    <Switch
+                      checked={notifications.weekly_report}
+                      onCheckedChange={(checked: boolean) => updateNotificationPref('weekly_report', checked)}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Marketing Emails</p>
+                      <p className="text-sm text-muted-foreground">Receive promotional emails and updates</p>
+                    </div>
+                    <Switch
+                      checked={notifications.marketing_emails}
+                      onCheckedChange={(checked: boolean) => updateNotificationPref('marketing_emails', checked)}
+                    />
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Security Tab */}
+        <TabsContent value="security" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Change Password</CardTitle>
+              <CardDescription>Update your password to keep your account secure</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {!otpSent ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    To change your password, we need to verify your identity. Click the button below to send a one-time password (OTP) to your email address <strong>{session?.user?.email}</strong>.
+                  </p>
+                  <Button onClick={requestOtp} disabled={loading.profile}>
+                    {loading.profile ? 'Sending...' : 'Send OTP'}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="otpCode">Enter OTP</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="otpCode"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value)}
+                        placeholder="123456"
+                        maxLength={6}
+                      />
+                      <Button variant="outline" onClick={requestOtp} disabled={loading.profile}>
+                        Resend
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">OTP sent to {session?.user?.email}</p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={passwordForm.new_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, new_password: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={passwordForm.confirm_password}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirm_password: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={changePassword} disabled={loading.profile}>
+                      {loading.profile ? 'Updating...' : 'Update Password'}
+                    </Button>
+                    <Button variant="ghost" onClick={() => setOtpSent(false)}>
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <CardHeader>
+            <CardTitle>Two-Factor Authentication</CardTitle>
+            <CardDescription>Add an extra layer of security to your account</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {loading.twoFactor ? (
+              <div className="flex items-center space-x-2 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <p>Loading status...</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="font-medium">Status</p>
+                    <div className="flex items-center gap-2">
+                      {twoFactorStatus?.enabled ? (
+                        <span className="flex items-center text-sm text-green-500 font-medium">
+                          <Check className="mr-1 h-4 w-4" /> Enabled
+                        </span>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">Disabled</span>
+                      )}
+                    </div>
+                  </div>
+                  {twoFactorStatus?.enabled ? (
+                    !showDisable2FAForm && (
+                      <Button variant="destructive" size="sm" onClick={() => setShowDisable2FAForm(true)}>
+                        <Shield className="mr-2 h-4 w-4" /> Disable 2FA
+                      </Button>
+                    )
+                  ) : (
+                    !qrCode && (
+                      <Button onClick={enable2FA} size="sm">
+                        <Shield className="mr-2 h-4 w-4" /> Set up 2FA
+                      </Button>
+                    )
+                  )}
+                </div>
+
+                {/* Disable 2FA Form */}
+                {showDisable2FAForm && (
+                  <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4 space-y-4 mt-4 animate-in fade-in slide-in-from-top-2">
+                    <div className="flex items-center gap-2 text-destructive">
+                      <Shield className="h-5 w-5" />
+                      <p className="font-semibold text-sm">Confirm Disabling 2FA</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Please enter your authentication code and password to verify strictly.
+                    </p>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="disable-2fa-code">2FA Code</Label>
+                        <Input
+                          id="disable-2fa-code"
+                          placeholder="000000"
+                          maxLength={6}
+                          className="font-mono"
+                          value={disable2FAForm.code}
+                          onChange={(e) => setDisable2FAForm({ ...disable2FAForm, code: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="disable-2fa-password">Password</Label>
+                        <Input
+                          id="disable-2fa-password"
+                          type="password"
+                          placeholder="Current Password"
+                          value={disable2FAForm.password}
+                          onChange={(e) => setDisable2FAForm({ ...disable2FAForm, password: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="ghost" size="sm" onClick={() => setShowDisable2FAForm(false)}>Cancel</Button>
+                      <Button variant="destructive" size="sm" onClick={disable2FA} disabled={loading.twoFactor}>
+                        {loading.twoFactor ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Disabling...
+                          </>
+                        ) : (
+                          'Confirm Disable'
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {qrCode && (
+                  <div className="space-y-6 border p-6 rounded-lg mt-4 bg-muted/30">
+                    <div className="text-center space-y-4">
+                      <div className="bg-white p-2 inline-block rounded-lg shadow-sm">
+                        <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                      </div>
+                      <p className="text-sm text-muted-foreground w-2/3 mx-auto">
+                        Scan this QR code with your authenticator app (e.g., Google Authenticator, Authy)
+                      </p>
+                    </div>
+
+                    <div className="max-w-xs mx-auto space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="verification-code" className="text-center block">Enter Verification Code</Label>
+                        <Input
+                          id="verification-code"
+                          value={twoFactorCode}
+                          onChange={(e) => setTwoFactorCode(e.target.value)}
+                          placeholder="000 000"
+                          maxLength={6}
+                          className="text-center font-mono text-lg tracking-widest"
+                        />
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button onClick={verify2FA} className="w-full" disabled={loading.twoFactor}>
+                          {loading.twoFactor ? 'Verifying...' : 'Verify & Enable'}
+                        </Button>
+                        <Button variant="outline" onClick={() => { setQrCode(null); setTwoFactorCode(''); }} className="w-full">
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+
+                    {backupCodes.length > 0 && (
+                      <div className="mt-6 pt-6 border-t">
+                        <Label className="flex items-center gap-2 mb-3 text-amber-600 dark:text-amber-500">
+                          <Shield className="h-4 w-4" /> Backup Codes
+                        </Label>
+                        <div className="grid grid-cols-2 gap-2 mt-2 bg-muted p-4 rounded-lg font-mono text-sm border">
+                          {backupCodes.map((code, i) => (
+                            <div key={i} className="flex items-center justify-between px-2">
+                              <code>{code}</code>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 text-center">
+                          Store these codes safely. You can use them to login if you lose access to your device.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+      {/* End of Security Tab */}
+
+    </Tabs>
+    </div >
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div>Loading settings...</div>}>
+      <SettingsContent />
+    </Suspense>
+  );
+}

@@ -1,0 +1,96 @@
+{
+  "timestamp": "2025-11-05T12:38:02.017Z",
+  "summary": {
+    "total": 49,
+    "passed": 43,
+    "failed": 6,
+    "passRate": "87.8%"
+  },
+  "passedTests": [
+    "POST /auth/register",
+    "POST /validate/comprehensive",
+    "POST /validate/syntax",
+    "POST /validate/domain",
+    "POST /validate/disposable",
+    "POST /validate/fraud",
+    "POST /validate/role",
+    "POST /validate/reputation",
+    "POST /validate/smtp",
+    "POST /validate/enrich",
+    "POST /validate/batch",
+    "GET /dashboard/stats",
+    "GET /dashboard/recent",
+    "GET /dashboard/analytics",
+    "GET /bulk/jobs",
+    "POST /bulk/upload (requires file)",
+    "GET /bulk/status/:jobId (requires jobId)",
+    "GET /webhooks",
+    "POST /webhooks",
+    "PUT /webhooks/:id",
+    "DELETE /webhooks/:id",
+    "GET /api-keys",
+    "POST /api-keys/:id/regenerate",
+    "DELETE /api-keys/:id",
+    "GET /billing/info",
+    "GET /billing/plans",
+    "GET /billing/invoices",
+    "GET /billing/invoices/:id/pdf (requires invoice)",
+    "POST /billing/payment-method (requires Stripe)",
+    "POST /billing/change-plan (skipped - would change plan)",
+    "POST /billing/cancel (skipped - would cancel subscription)",
+    "GET /user/profile",
+    "PUT /user/profile",
+    "DELETE /user/account (skipped - would delete account)",
+    "GET /user/notifications",
+    "PUT /user/notifications",
+    "GET /user/2fa/status",
+    "POST /user/2fa/verify (requires valid TOTP code)",
+    "POST /user/2fa/disable (requires valid TOTP code)",
+    "GET /analytics/usage",
+    "GET /analytics/endpoints",
+    "GET /analytics/validation-types",
+    "GET /analytics/errors"
+  ],
+  "failedTests": [
+    {
+      "name": "POST /auth/login",
+      "error": {
+        "error": "Login failed: Invalid credentials"
+      }
+    },
+    {
+      "name": "POST /email/details",
+      "error": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n<title>Error</title>\n</head>\n<body>\n<pre>Cannot POST /api/v1/email/details</pre>\n</body>\n</html>\n"
+    },
+    {
+      "name": "POST /webhooks/:id/test",
+      "error": {
+        "success": false,
+        "error": "Webhook test failed",
+        "details": "Request failed with status code 403",
+        "status_code": 403
+      }
+    },
+    {
+      "name": "POST /api-keys",
+      "error": {
+        "error": "Too many API key requests, please try again later",
+        "retryAfter": 60
+      }
+    },
+    {
+      "name": "POST /user/change-password",
+      "error": {
+        "success": false,
+        "error": "Current password is incorrect"
+      }
+    },
+    {
+      "name": "POST /user/2fa/enable",
+      "error": {
+        "error": "Too many user requests, please try again later",
+        "retryAfter": 60
+      }
+    }
+  ]
+}
