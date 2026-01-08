@@ -1,7 +1,6 @@
 'use client';
 
-import { useSession, signOut } from 'next-auth/react';
-import { Button } from '@/components/ui/button';
+import { useSession } from 'next-auth/react';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { UserNav } from './user-nav';
 import { NotificationsDropdown } from './notifications-dropdown';
@@ -14,12 +13,15 @@ interface DashboardHeaderProps {
 }
 
 export function DashboardHeader({ onMenuClick }: DashboardHeaderProps) {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { stats, fetchStats } = useDashboardStore();
 
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    // Only fetch stats when session is authenticated
+    if (status === 'authenticated' && session?.user?.accessToken) {
+      fetchStats();
+    }
+  }, [status, session, fetchStats]);
 
   return (
     <header className="flex h-16 items-center justify-between border-b bg-card px-4 sm:px-6">

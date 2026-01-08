@@ -2,11 +2,43 @@ import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import { apiService } from './services/api';
 
+const useSecureCookies = process.env.NEXTAUTH_URL?.startsWith('https://') ?? false;
+
 export const authOptions: NextAuthOptions = {
+  debug: process.env.NODE_ENV === 'development',
   pages: {
     signIn: '/login',
     signOut: '/login',
     error: '/login',
+  },
+  cookies: {
+    sessionToken: {
+      name: useSecureCookies ? '__Secure-next-auth.session-token' : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: useSecureCookies,
+        maxAge: 24 * 60 * 60, // 24 hours - must match session.maxAge
+      },
+    },
+    callbackUrl: {
+      name: useSecureCookies ? '__Secure-next-auth.callback-url' : 'next-auth.callback-url',
+      options: {
+        sameSite: 'lax',
+        path: '/',
+        secure: useSecureCookies,
+      },
+    },
+    csrfToken: {
+      name: useSecureCookies ? '__Host-next-auth.csrf-token' : 'next-auth.csrf-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: useSecureCookies,
+      },
+    },
   },
   providers: [
     CredentialsProvider({
@@ -68,15 +100,22 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
+      // On initial sign in, copy user data to token
       if (user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
         token.credits = user.credits;
         token.plan = user.plan;
-        token.accessToken = user.accessToken; // Store backend JWT token
+        token.accessToken = user.accessToken;
       }
+
+      // Log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[JWT Callback]', { trigger, hasUser: !!user, hasToken: !!token?.accessToken });
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -87,32 +126,13 @@ export const authOptions: NextAuthOptions = {
         session.user.credits = token.credits as number;
         session.user.plan = token.plan as string;
         session.user.accessToken = token.accessToken as string;
-
-        // Fetch fresh credits on every session check to avoid stale data
-        if (token.accessToken) {
-          try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/user/profile`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Bearer ${token.accessToken}`,
-                'Cache-Control': 'no-cache, no-store, must-revalidate',
-                'Pragma': 'no-cache'
-              },
-              cache: 'no-store' // Ensure fresh data
-            });
-            if (response.ok) {
-              const data = await response.json();
-              if (data.success && data.data?.credits !== undefined) {
-                session.user.credits = data.data.credits; // Update with fresh credits
-                token.credits = data.data.credits; // Also update token for next call
-              }
-            }
-          } catch (error) {
-            console.error('Failed to refresh credits in session:', error);
-            // Keep cached credits if API call fails
-          }
-        }
       }
+
+      // Log for debugging
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Session Callback]', { hasSession: !!session?.user, hasAccessToken: !!session?.user?.accessToken });
+      }
+
       return session;
     },
   },

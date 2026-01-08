@@ -3,7 +3,16 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   images: {
-    domains: ['localhost'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'validink.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'www.validink.com',
+      },
+    ],
   },
 
   experimental: {

@@ -1,30 +1,31 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Bar, Line, Doughnut } from 'react-chartjs-2';
-import { 
-  Chart as ChartJS, 
-  ArcElement, 
-  BarElement, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
+import {
+  Chart as ChartJS,
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
   LineElement,
   Title,
   Tooltip,
-  Legend 
+  Legend
 } from 'chart.js';
 import { themeConfig } from '@/lib/theme/constants';
 import { apiService } from '@/lib/services/api';
 
 ChartJS.register(
-  ArcElement, 
-  BarElement, 
-  CategoryScale, 
-  LinearScale, 
-  PointElement, 
+  ArcElement,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
   LineElement,
   Title,
   Tooltip,
@@ -32,18 +33,22 @@ ChartJS.register(
 );
 
 export default function AnalyticsPage() {
+  const { data: session, status } = useSession();
   const [period, setPeriod] = useState('7d');
   const [interval, setInterval] = useState('1d');
   const [loading, setLoading] = useState(true);
-  
+
   const [usageData, setUsageData] = useState<any>(null);
   const [endpointsData, setEndpointsData] = useState<any>(null);
   const [validationTypesData, setValidationTypesData] = useState<any>(null);
   const [errorsData, setErrorsData] = useState<any>(null);
 
   useEffect(() => {
-    loadAnalytics();
-  }, [period, interval]);
+    // Only load analytics when session is authenticated
+    if (status === 'authenticated' && session?.user?.accessToken) {
+      loadAnalytics();
+    }
+  }, [status, session, period, interval]);
 
   const loadAnalytics = async () => {
     setLoading(true);
@@ -66,7 +71,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  if (loading) {
+  if (status === 'loading' || loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">

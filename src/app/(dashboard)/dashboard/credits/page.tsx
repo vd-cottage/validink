@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { formatNumber } from '@/lib/utils';
@@ -36,12 +37,15 @@ const creditPackages = [
 ];
 
 export default function CreditsPage() {
+  const { data: session, status } = useSession();
   const { stats, isLoading, fetchStats } = useDashboardStore();
 
-  // Fetch fresh stats on mount and provide refresh capability
+  // Fetch fresh stats on mount when session is authenticated
   useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+    if (status === 'authenticated' && session?.user?.accessToken) {
+      fetchStats();
+    }
+  }, [status, session, fetchStats]);
 
   const credits = stats?.credits?.remaining ?? 0;
 

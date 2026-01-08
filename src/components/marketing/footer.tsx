@@ -66,9 +66,20 @@ export function Footer() {
             </ul>
           </div>
         </div>
-        <div className="mt-12 border-t pt-8 text-center">
+        <div className="mt-12 border-t pt-8 text-center space-y-3">
           <p className="text-sm text-muted-foreground">
             © {new Date().getFullYear()} ValidInk. All rights reserved.
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Powered by{' '}
+            <a
+              href="https://www.vdcottage.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline font-medium"
+            >
+              VDCottage
+            </a>
           </p>
         </div>
       </div>

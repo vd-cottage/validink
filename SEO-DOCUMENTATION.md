@@ -30,9 +30,9 @@ This document outlines the SEO implementation status for the ValidInk email vali
 
 | Feature | Priority | Action Required |
 |---------|----------|-----------------|
-| Google Search Console | High | Add verification code in `/src/app/layout.tsx` line 65 |
-| Bing Webmaster | Medium | Add Bing verification meta tag |
-| Page-specific OG Images | Low | Create unique images for each page |
+| Google Search Console | High | Set `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION` env var |
+| Bing Webmaster | Medium | Set `NEXT_PUBLIC_BING_SITE_VERIFICATION` env var |
+| Page-specific OG Images | ✅ Done | Created unique images for /docs, /help, /blog, /about |
 | Hreflang Tags | Low | Add if multi-language support needed |
 | Breadcrumb Schema | Low | Add to documentation pages |
 
@@ -47,7 +47,11 @@ dashboard/
 │   ├── favicon-16.png          # 16x16 favicon
 │   ├── favicon-32.png          # 32x32 favicon
 │   ├── apple-touch-icon.png    # 180x180 Apple touch icon
-│   ├── og-image.png            # 1200x630 Open Graph image
+│   ├── og-image.png            # 1200x630 Default Open Graph image
+│   ├── og-docs.png             # OG image for /docs page
+│   ├── og-help.png             # OG image for /help page
+│   ├── og-blog.png             # OG image for /blog page
+│   ├── og-about.png            # OG image for /about page
 │   ├── icon.png                # Original icon (1024x1024)
 │   └── logo.png                # Full logo
 ├── src/
@@ -151,12 +155,10 @@ URL: https://validink.com/sitemap.xml
 1. Go to [Google Search Console](https://search.google.com/search-console)
 2. Add property: `https://validink.com`
 3. Choose "HTML tag" verification method
-4. Copy the verification code
-5. Update `/src/app/layout.tsx`:
-   ```typescript
-   verification: {
-     google: 'YOUR_ACTUAL_VERIFICATION_CODE',
-   },
+4. Copy the verification code (just the content value, not the full meta tag)
+5. Add to your `.env.local` or production environment:
+   ```bash
+   NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION=your-verification-code-here
    ```
 
 #### 2. Submit Sitemap
@@ -170,15 +172,11 @@ URL: https://validink.com/sitemap.xml
 #### 3. Bing Webmaster Tools
 1. Go to [Bing Webmaster Tools](https://www.bing.com/webmasters)
 2. Add your site
-3. Get verification code
-4. Add to layout.tsx:
-   ```typescript
-   verification: {
-     google: 'google-code',
-     // Add Bing verification
-   },
+3. Choose "Meta tag" verification and copy the content value
+4. Add to your `.env.local` or production environment:
+   ```bash
+   NEXT_PUBLIC_BING_SITE_VERIFICATION=your-bing-verification-code
    ```
-   Or add meta tag manually in head.
 
 #### 4. Monitor Performance
 - Set up Google Search Console email alerts
@@ -187,11 +185,12 @@ URL: https://validink.com/sitemap.xml
 
 ### Low Priority
 
-#### 5. Page-Specific OG Images
-Create custom OG images for:
-- `/docs` - API documentation themed
-- `/help` - FAQ/support themed
-- `/blog` - Blog/news themed
+#### 5. Page-Specific OG Images ✅ COMPLETED
+Custom OG images created for:
+- `/docs` - API documentation themed (`/public/og-docs.png`)
+- `/help` - FAQ/support themed (`/public/og-help.png`)
+- `/blog` - Blog/news themed (`/public/og-blog.png`)
+- `/about` - About page themed (`/public/og-about.png`)
 
 #### 6. Add FAQ Schema to Help Page
 The JSON-LD component `FAQJsonLd` is ready in `/src/components/seo/json-ld.tsx`.
@@ -254,6 +253,8 @@ Import and use it in the help page with the FAQ data.
 | 2024-12-09 | Added JSON-LD schemas | `/src/components/seo/json-ld.tsx` |
 | 2024-12-09 | Added page-specific metadata | Marketing pages |
 | 2024-12-09 | Fixed middleware to allow sitemap/robots | `/src/middleware.ts` |
+| 2024-12-09 | Added env vars for search engine verification | `/src/app/layout.tsx`, `.env.example` |
+| 2024-12-09 | Created page-specific OG images | `/public/og-*.png`, marketing pages |
 
 ---
 

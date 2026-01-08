@@ -10,7 +10,10 @@ import { Toaster } from 'sonner';
 export function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <ErrorBoundary>
-      <SessionProvider>
+      <SessionProvider
+        refetchInterval={5 * 60}
+        refetchOnWindowFocus={true}
+      >
         <ThemeProvider
           attribute="class"
           defaultTheme="light"

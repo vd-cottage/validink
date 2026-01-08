@@ -21,17 +21,21 @@ export const publicApi = axios.create({
   }
 });
 
+// Track session ready state (kept for AxiosTokenProvider compatibility)
+let isSessionReady = false; // eslint-disable-line
+export const setSessionReady = (ready: boolean) => {
+  isSessionReady = ready;
+};
+
 // Handle response errors (ONLY for authenticated api instance)
+// NOTE: Auto-logout on 401 is DISABLED to prevent session clearing issues
+// Users will be redirected by middleware if their session is truly invalid
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
     if (error.response?.status === 401) {
-      // Handle unauthorized error (redirect to login)
-      if (typeof window !== 'undefined') {
-        // Use NextAuth signOut to clear the session and prevent middleware loops
-        const { signOut } = await import('next-auth/react');
-        signOut({ callbackUrl: '/login' });
-      }
+      // Log 401 errors for debugging but don't auto-logout
+      console.warn('[API] 401 Unauthorized:', error.config?.url);
     }
     return Promise.reject(error);
   }

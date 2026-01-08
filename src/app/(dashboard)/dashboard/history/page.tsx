@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -23,14 +24,18 @@ interface ValidationActivity {
 }
 
 export default function HistoryPage() {
+  const { data: session, status } = useSession();
   const { recentActivity, fetchRecentActivity, isLoading } = useDashboardStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredActivity, setFilteredActivity] = useState<ValidationActivity[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchRecentActivity();
-  }, [fetchRecentActivity]);
+    // Only fetch when session is authenticated
+    if (status === 'authenticated' && session?.user?.accessToken) {
+      fetchRecentActivity();
+    }
+  }, [status, session, fetchRecentActivity]);
 
   useEffect(() => {
     if (recentActivity) {

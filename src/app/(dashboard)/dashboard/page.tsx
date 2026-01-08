@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useDashboardStore } from '@/lib/stores/dashboardStore';
 import { formatNumber, formatPercentage } from '@/lib/utils';
@@ -12,15 +13,19 @@ import { StatsChart } from '@/components/dashboard/stats-chart';
 import { RecentActivity } from '@/components/dashboard/recent-activity';
 
 export default function DashboardPage() {
+  const { data: session, status } = useSession();
   const { stats, analytics, recentActivity, isLoading, fetchStats, fetchAnalytics, fetchRecentActivity } = useDashboardStore();
 
   useEffect(() => {
-    fetchStats();
-    fetchAnalytics();
-    fetchRecentActivity();
-  }, [fetchStats, fetchAnalytics, fetchRecentActivity]);
+    // Only fetch data when session is fully authenticated (not loading)
+    if (status === 'authenticated' && session?.user?.accessToken) {
+      fetchStats();
+      fetchAnalytics();
+      fetchRecentActivity();
+    }
+  }, [status, session, fetchStats, fetchAnalytics, fetchRecentActivity]);
 
-  if (isLoading) {
+  if (status === 'loading' || isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
         <div className="text-center">

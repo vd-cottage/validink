@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { apiService } from '@/lib/services/api';
-import { Loader2, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Mail, ChevronDown, ChevronUp } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, ShieldCheck, Mail } from 'lucide-react';
 
 export default function ValidatePage() {
   const [email, setEmail] = useState('');
@@ -14,7 +14,120 @@ export default function ValidatePage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [error, setError] = useState('');
-  const [showJson, setShowJson] = useState(false);
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+
+  // Fetch credits from dashboard stats API
+  const fetchCredits = async () => {
+    try {
+      const response = await apiService.dashboard.getStats();
+      if (response.data?.data?.credits?.remaining !== undefined) {
+        setCreditsRemaining(response.data.data.credits.remaining);
+      }
+    } catch (err) {
+      console.error('Failed to fetch credits:', err);
+    }
+  };
+
+  // Fetch credits on initial load
+  useEffect(() => {
+    fetchCredits();
+  }, []);
+
+  // Normalize API response to a consistent format for the UI
+  const normalizeResult = (rawData: any) => {
+    // The API returns nested structure: { success, data: { success, data: { email, result: {...} } } }
+    // We need to extract and normalize the actual validation result
+
+    let data = rawData;
+
+    // Unwrap nested data structures
+    if (data?.data?.data?.result) {
+      // Triple nested with result: { data: { data: { result: {...} } } }
+      data = data.data.data.result;
+    } else if (data?.data?.result) {
+      // Double nested with result: { data: { result: {...} } }
+      data = data.data.result;
+    } else if (data?.result) {
+      // Single nested with result: { result: {...} }
+      data = data.result;
+    } else if (data?.data?.data) {
+      // Triple nested without result
+      data = data.data.data;
+    } else if (data?.data) {
+      // Double nested without result
+      data = data.data;
+    }
+
+    // Now normalize the fields to match what the UI expects
+    const normalized: any = {
+      email: data.email,
+      is_valid: data.is_valid,
+      reason: data.reason,
+      cached: data.cached,
+      processing_time_ms: rawData?.data?.data?.processing_time_ms || rawData?.data?.processing_time_ms || data.processing_time_ms,
+    };
+
+    // Normalize format validation - derive from validation object if not present
+    normalized.format = data.format || {
+      syntax_valid: data.validation?.domain_valid !== false && data.is_valid !== false,
+      tld_valid: data.domain?.exists || data.validation?.domain_valid,
+      is_unicode: false,
+      normalized: data.email,
+    };
+
+    // Normalize domain info
+    normalized.domain = data.domain || {};
+
+    // Normalize risk analysis - map from validation object
+    normalized.risk = data.risk || {
+      is_disposable: data.validation?.is_disposable || false,
+      is_role_account: data.validation?.is_role_account || false,
+      is_fraud: data.validation?.is_fraud || false,
+      fraud_evidence: data.validation?.fraud_evidence || [],
+      disposable_confidence: data.validation?.is_disposable ? 0.9 : 0,
+    };
+
+    // Normalize provider info
+    normalized.provider = data.provider || {
+      name: data.domain?.name ? data.domain.name.split('.')[0] : 'Unknown',
+      type: 'Unknown',
+      is_free: data.validation?.is_disposable || false,
+      is_business: !data.validation?.is_disposable && !data.validation?.is_role_account,
+    };
+
+    // Include intelligence data if present
+    if (data.intelligence) {
+      normalized.intelligence = data.intelligence;
+    }
+
+    // Include risk assessment if present
+    if (data.risk_assessment) {
+      normalized.risk_assessment = data.risk_assessment;
+    }
+
+    // Include SMTP data if present
+    if (data.smtp) {
+      normalized.smtp = data.smtp;
+    }
+
+    // Include advanced data if present
+    if (data.advanced) {
+      normalized.advanced = data.advanced;
+    }
+
+    // Include deliverability if present
+    if (data.deliverability) {
+      normalized.deliverability = data.deliverability;
+    }
+
+    // Extract credits info from outer response
+    normalized.meta = {
+      creditsRemaining: rawData?.data?.credits_remaining || rawData?.credits_remaining,
+      creditsUsed: rawData?.data?.credits_used || rawData?.credits_used,
+    };
+
+    return normalized;
+  };
 
   const handleValidate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,27 +137,10 @@ export default function ValidatePage() {
 
     try {
       const response = await apiService.validation.validate(email, mode);
-      // API returns { success, data: { data: {...validation...}, meta: {...} } }
-      // or { success, data: {...validation...}, meta: {...} }
-      const responseData = response.data;
-
-      // Handle nested data structure from API
-      if (responseData?.data?.data) {
-        // Double nested: { data: { data: {...}, meta: {...} } }
-        setResult({
-          ...responseData.data.data,
-          meta: responseData.data.meta || responseData.meta
-        });
-      } else if (responseData?.data && responseData?.success !== undefined) {
-        // Single nested: { success, data: {...}, meta: {...} }
-        setResult({
-          ...responseData.data,
-          meta: responseData.meta
-        });
-      } else {
-        // Direct data
-        setResult(responseData);
-      }
+      const normalized = normalizeResult(response.data);
+      setResult(normalized);
+      // Fetch updated credits after validation
+      await fetchCredits();
     } catch (err: any) {
       setError(err.response?.data?.error || 'Validation failed');
     } finally {
@@ -146,6 +242,16 @@ export default function ValidatePage() {
 
         {/* Results Section */}
         <div className="lg:col-span-2">
+          {error && (
+            <Card className="border-destructive bg-destructive/5 mb-4">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3 text-destructive">
+                  <XCircle className="h-5 w-5" />
+                  <span className="font-medium">{error}</span>
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {loading ? (
             <Card className="h-full flex items-center justify-center min-h-[400px]">
               <div className="text-center space-y-4">
@@ -156,7 +262,7 @@ export default function ValidatePage() {
           ) : result ? (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               {/* Main Score Card */}
-              <Card className="border-t-4 border-t-primary">
+              <Card className={`border-t-4 ${result.is_valid ? 'border-t-success' : 'border-t-destructive'}`}>
                 <CardContent className="pt-6">
                   <div className="flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
                     <div className="flex items-center gap-3 sm:gap-4">
@@ -164,7 +270,11 @@ export default function ValidatePage() {
                           h-12 w-12 sm:h-16 sm:w-16 rounded-full flex items-center justify-center text-xl sm:text-2xl font-bold
                           ${result.is_valid ? 'bg-success/10 text-success ring-2 ring-success/20' : 'bg-destructive/10 text-destructive ring-2 ring-destructive/20'}
                         `}>
-                        {result.score || result.deliverability?.deliverability_score || (result.is_valid ? 100 : 0)}
+                        {result.score || result.deliverability?.deliverability_score ||
+                          (result.risk_assessment?.score !== undefined
+                            ? Math.round((1 - result.risk_assessment.score) * 100)
+                            : (result.is_valid ? 100 : 0)
+                          )}
                       </div>
                       <div>
                         <h3 className="text-lg sm:text-2xl font-bold break-all">{result.email}</h3>
@@ -173,25 +283,33 @@ export default function ValidatePage() {
                             {result.is_valid ? 'Valid' : 'Invalid'}
                           </span>
                           <span className="text-muted-foreground text-sm">
-                            {result.analysis_time ? `${result.analysis_time}ms` : 'Processed'}
+                            {result.processing_time_ms ? `${result.processing_time_ms.toFixed(1)}ms` : 'Processed'}
                           </span>
                         </div>
+                        {result.reason && !result.is_valid && (
+                          <div className="mt-2 text-sm text-destructive">
+                            Reason: {result.reason}
+                          </div>
+                        )}
                       </div>
                     </div>
 
                     <div className="text-center sm:text-right">
                       <div className="text-sm text-muted-foreground">Deliverability</div>
-                      <div className={`font-medium ${
-                        (typeof result.deliverability === 'object'
-                          ? result.deliverability?.recommendation === 'accept'
-                          : result.deliverability === 'deliverable' || result.is_valid
-                        ) ? 'text-success' : 'text-destructive'
-                      }`}>
+                      <div className={`font-medium ${result.is_valid ? 'text-success' : 'text-destructive'}`}>
                         {typeof result.deliverability === 'object'
                           ? `${result.deliverability.recommendation || 'Unknown'} (${result.deliverability.quality_grade || '-'})`
-                          : (result.deliverability || (result.is_valid ? 'Deliverable' : 'Undeliverable'))
+                          : (result.is_valid ? 'Deliverable' : 'Undeliverable')
                         }
                       </div>
+                      {result.risk_assessment?.risk_level && (
+                        <div className={`text-sm mt-1 ${
+                          result.risk_assessment.risk_level === 'low' ? 'text-success' :
+                          result.risk_assessment.risk_level === 'medium' ? 'text-yellow-500' : 'text-destructive'
+                        }`}>
+                          Risk: {result.risk_assessment.risk_level}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -208,15 +326,26 @@ export default function ValidatePage() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2">
-                    <CheckItem label="Syntax Valid" status={result.format?.syntax_valid} />
-                    <CheckItem label="TLD Valid" status={result.format?.tld_valid} value={result.format?.tld?.toUpperCase()} />
-                    <CheckItem label="Unicode" status={result.format?.is_unicode ? 'moderate' : true} value={result.format?.is_unicode ? 'Yes' : 'No'} />
-                    {result.format?.normalized && (
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <span className="font-medium text-sm">Normalized</span>
-                        <span className="text-sm text-muted-foreground font-mono">{result.format.normalized}</span>
-                      </div>
-                    )}
+                    <CheckItem
+                      label="Syntax Valid"
+                      status={result.format?.syntax_valid ?? (result.domain?.exists && !result.risk?.is_fraud)}
+                    />
+                    <CheckItem
+                      label="TLD Valid"
+                      status={result.format?.tld_valid ?? result.domain?.exists}
+                      value={result.format?.tld?.toUpperCase() || result.domain?.name?.split('.').pop()?.toUpperCase()}
+                    />
+                    <CheckItem
+                      label="Unicode"
+                      status={result.format?.is_unicode ? 'moderate' : true}
+                      value={result.format?.is_unicode ? 'Yes' : 'No'}
+                    />
+                    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                      <span className="font-medium text-sm">Normalized</span>
+                      <span className="text-sm text-muted-foreground font-mono truncate max-w-[200px]">
+                        {result.format?.normalized || result.email}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -263,11 +392,31 @@ export default function ValidatePage() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     <CheckItem label="Disposable Email" status={!result.risk?.is_disposable} value={result.risk?.is_disposable ? 'Yes - Detected' : 'No'} />
-                    <CheckItem label="Role Account" status={!result.risk?.is_role_account} value={result.risk?.is_role_account ? `Yes (${result.risk.role_type})` : 'No'} />
-                    {result.risk?.disposable_confidence !== undefined && (
-                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                        <span className="font-medium text-sm">Disposable Confidence</span>
-                        <span className="text-sm text-muted-foreground font-mono">{Math.round(result.risk.disposable_confidence * 100)}%</span>
+                    <CheckItem label="Role Account" status={!result.risk?.is_role_account} value={result.risk?.is_role_account ? `Yes (${result.risk.role_type || 'detected'})` : 'No'} />
+                    <CheckItem label="Fraud Detected" status={!result.risk?.is_fraud} value={result.risk?.is_fraud ? 'Yes' : 'No'} />
+                    {result.risk_assessment && (
+                      <>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                          <span className="font-medium text-sm">Risk Level</span>
+                          <span className={`text-sm font-medium capitalize ${
+                            result.risk_assessment.risk_level === 'low' ? 'text-success' :
+                            result.risk_assessment.risk_level === 'medium' ? 'text-yellow-500' : 'text-destructive'
+                          }`}>{result.risk_assessment.risk_level}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                          <span className="font-medium text-sm">Risk Score</span>
+                          <span className="text-sm text-muted-foreground font-mono">{Math.round(result.risk_assessment.score * 100)}%</span>
+                        </div>
+                      </>
+                    )}
+                    {result.risk?.fraud_evidence && result.risk.fraud_evidence.length > 0 && (
+                      <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                        <span className="font-medium text-sm block mb-2 text-destructive">Fraud Evidence</span>
+                        <div className="text-xs text-muted-foreground space-y-1">
+                          {result.risk.fraud_evidence.map((evidence: string, i: number) => (
+                            <div key={i}>• {evidence}</div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </CardContent>
@@ -300,6 +449,64 @@ export default function ValidatePage() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Pattern Analysis (if available) */}
+                {result.intelligence?.pattern_analysis && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4" />
+                        Pattern Analysis
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <CheckItem
+                        label="Pattern Suspicious"
+                        status={!result.intelligence.pattern_analysis.is_suspicious}
+                        value={result.intelligence.pattern_analysis.is_suspicious ? 'Yes' : 'No'}
+                      />
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                        <span className="font-medium text-sm">Pattern Score</span>
+                        <span className="text-sm text-muted-foreground font-mono">
+                          {Math.round(result.intelligence.pattern_analysis.score * 100)}%
+                        </span>
+                      </div>
+                      {result.intelligence.pattern_analysis.patterns && (
+                        <div className="p-3 rounded-lg bg-muted/50">
+                          <span className="font-medium text-sm block mb-2">Pattern Details</span>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Local Length</span>
+                              <span className="font-mono">{result.intelligence.pattern_analysis.patterns.local_length}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Numbers Ratio</span>
+                              <span className="font-mono">{Math.round(result.intelligence.pattern_analysis.patterns.numbers_ratio * 100)}%</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Random Looking</span>
+                              <span className="font-mono">{result.intelligence.pattern_analysis.patterns.random_looking ? 'Yes' : 'No'}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-muted-foreground">Consecutive #s</span>
+                              <span className="font-mono">{result.intelligence.pattern_analysis.patterns.consecutive_numbers ? 'Yes' : 'No'}</span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {result.intelligence.pattern_analysis.reasons && result.intelligence.pattern_analysis.reasons.length > 0 && (
+                        <div className="p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                          <span className="font-medium text-sm block mb-2 text-yellow-600">Pattern Warnings</span>
+                          <div className="text-xs text-muted-foreground space-y-1">
+                            {result.intelligence.pattern_analysis.reasons.map((reason: string, i: number) => (
+                              <div key={i}>• {reason}</div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
                 {/* SMTP Verification (Deep Analysis Only) */}
                 {result.smtp && (
@@ -372,11 +579,10 @@ export default function ValidatePage() {
                       </div>
                       <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
                         <span className="font-medium text-sm">Risk Level</span>
-                        <span className={`text-sm font-medium capitalize ${
-                          result.deliverability.risk_level === 'low' ? 'text-success' :
-                          result.deliverability.risk_level === 'medium-low' ? 'text-blue-500' :
-                          result.deliverability.risk_level === 'medium' ? 'text-yellow-500' : 'text-destructive'
-                        }`}>{result.deliverability.risk_level}</span>
+                        <span className={`text-sm font-medium capitalize ${result.deliverability.risk_level === 'low' ? 'text-success' :
+                            result.deliverability.risk_level === 'medium-low' ? 'text-blue-500' :
+                              result.deliverability.risk_level === 'medium' ? 'text-yellow-500' : 'text-destructive'
+                          }`}>{result.deliverability.risk_level}</span>
                       </div>
                       <div className="p-3 rounded-lg bg-muted/50">
                         <span className="font-medium text-sm block mb-2">Score Components</span>
@@ -405,11 +611,10 @@ export default function ValidatePage() {
                       </div>
                       <div>
                         <span className="text-muted-foreground">Quality: </span>
-                        <span className={`font-medium capitalize ${
-                          (result.quality === 'excellent' || result.deliverability?.quality_grade === 'A') ? 'text-success' :
-                          (result.quality === 'good' || result.deliverability?.quality_grade === 'B') ? 'text-blue-500' :
-                          (result.quality === 'fair' || result.deliverability?.quality_grade === 'C') ? 'text-yellow-500' : 'text-destructive'
-                        }`}>{result.quality || result.deliverability?.quality_grade || 'Unknown'}</span>
+                        <span className={`font-medium capitalize ${(result.quality === 'excellent' || result.deliverability?.quality_grade === 'A') ? 'text-success' :
+                            (result.quality === 'good' || result.deliverability?.quality_grade === 'B') ? 'text-blue-500' :
+                              (result.quality === 'fair' || result.deliverability?.quality_grade === 'C') ? 'text-yellow-500' : 'text-destructive'
+                          }`}>{result.quality || result.deliverability?.quality_grade || 'Unknown'}</span>
                       </div>
                       {result.validation_level && (
                         <div>
@@ -430,30 +635,14 @@ export default function ValidatePage() {
                         </div>
                       )}
                     </div>
-                    {result.meta?.creditsRemaining !== undefined && (
+                    {creditsRemaining !== null && (
                       <div className="text-muted-foreground">
-                        Credits remaining: <span className="font-mono text-foreground">{result.meta.creditsRemaining}</span>
+                        Credits remaining: <span className="font-mono text-foreground font-medium">{creditsRemaining}</span>
                       </div>
                     )}
                   </div>
                 </CardContent>
               </Card>
-
-              {/* JSON Toggle */}
-              <div className="flex justify-end">
-                <Button variant="ghost" size="sm" onClick={() => setShowJson(!showJson)} className="text-muted-foreground">
-                  {showJson ? <ChevronUp className="mr-2 h-4 w-4" /> : <ChevronDown className="mr-2 h-4 w-4" />}
-                  {showJson ? 'Hide Raw Data' : 'View Raw Data'}
-                </Button>
-              </div>
-
-              {showJson && (
-                <Card className="bg-muted font-mono text-xs">
-                  <CardContent className="p-4 overflow-auto max-h-96">
-                    <pre>{JSON.stringify(result, null, 2)}</pre>
-                  </CardContent>
-                </Card>
-              )}
             </div>
           ) : (
             <div className="h-full flex items-center justify-center min-h-[400px] border-2 border-dashed rounded-lg text-muted-foreground">
