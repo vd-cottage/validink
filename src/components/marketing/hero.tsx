@@ -1,27 +1,145 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
 import { apiService } from '@/lib/services/api';
 import { toast } from 'sonner';
+import Script from 'next/script';
+
+// Turnstile types
+declare global {
+  interface Window {
+    turnstile: {
+      render: (container: string | HTMLElement, options: TurnstileOptions) => string;
+      reset: (widgetId: string) => void;
+      remove: (widgetId: string) => void;
+    };
+    onTurnstileLoad: () => void;
+  }
+}
+
+interface TurnstileOptions {
+  sitekey: string;
+  callback: (token: string) => void;
+  'error-callback'?: () => void;
+  'expired-callback'?: () => void;
+  theme?: 'light' | 'dark' | 'auto';
+  size?: 'normal' | 'compact';
+}
 
 export function HeroSection() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileWidgetId, setTurnstileWidgetId] = useState<string | null>(null);
+  const [turnstileLoaded, setTurnstileLoaded] = useState(false);
+
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  // Initialize Turnstile when script loads
+  const initTurnstile = useCallback(() => {
+    if (!siteKey || turnstileWidgetId) return;
+
+    const container = document.getElementById('turnstile-container');
+    if (!container || !window.turnstile) return;
+
+    try {
+      const widgetId = window.turnstile.render(container, {
+        sitekey: siteKey,
+        callback: (token: string) => {
+          setTurnstileToken(token);
+        },
+        'error-callback': () => {
+          toast.error('CAPTCHA error. Please refresh and try again.');
+          setTurnstileToken(null);
+        },
+        'expired-callback': () => {
+          setTurnstileToken(null);
+        },
+        theme: 'auto',
+        size: 'normal'
+      });
+      setTurnstileWidgetId(widgetId);
+    } catch (error) {
+      console.error('Turnstile initialization error:', error);
+    }
+  }, [siteKey, turnstileWidgetId]);
+
+  // Set up global callback for Turnstile script load
+  useEffect(() => {
+    window.onTurnstileLoad = () => {
+      setTurnstileLoaded(true);
+    };
+
+    // If script already loaded, init immediately
+    if (window.turnstile) {
+      setTurnstileLoaded(true);
+    }
+
+    return () => {
+      // Cleanup widget on unmount
+      if (turnstileWidgetId && window.turnstile) {
+        try {
+          window.turnstile.remove(turnstileWidgetId);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, [turnstileWidgetId]);
+
+  // Initialize Turnstile when loaded
+  useEffect(() => {
+    if (turnstileLoaded) {
+      initTurnstile();
+    }
+  }, [turnstileLoaded, initTurnstile]);
 
   const handleValidate = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!email) {
+      toast.error('Please enter an email address');
+      return;
+    }
+
+    // Check for Turnstile token (skip if no site key configured - dev mode)
+    if (siteKey && !turnstileToken) {
+      toast.error('Please complete the verification');
+      return;
+    }
+
     setIsValidating(true);
     try {
-      const response = await apiService.validation.comprehensive(email);
-      setResult(response.data);
+      const response = await apiService.public.tryEmail(email, turnstileToken || '');
+      setResult(response.data.data);
+
+      // Reset Turnstile for next use
+      if (turnstileWidgetId && window.turnstile) {
+        window.turnstile.reset(turnstileWidgetId);
+        setTurnstileToken(null);
+      }
     } catch (error: any) {
       console.error('Validation error:', error);
-      toast.error(error.response?.data?.error || 'Validation failed. Please try again.');
+
+      if (error.response?.data?.is_limit_exceeded) {
+        toast.error('Daily limit reached. Sign up for more validations!');
+      } else if (error.response?.data?.code === 'CAPTCHA_REQUIRED') {
+        toast.error('Please complete the verification');
+      } else if (error.response?.data?.code === 'CAPTCHA_FAILED') {
+        toast.error('Verification failed. Please try again.');
+        // Reset Turnstile on failure
+        if (turnstileWidgetId && window.turnstile) {
+          window.turnstile.reset(turnstileWidgetId);
+          setTurnstileToken(null);
+        }
+      } else {
+        toast.error(error.response?.data?.error || 'Validation failed. Please try again.');
+      }
     } finally {
       setIsValidating(false);
     }
@@ -29,6 +147,15 @@ export function HeroSection() {
 
   return (
     <section className="relative">
+      {/* Turnstile Script */}
+      {siteKey && (
+        <Script
+          src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad"
+          async
+          defer
+        />
+      )}
+
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 sm:py-24 md:py-32">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-100 sm:text-4xl md:text-5xl lg:text-6xl">
@@ -50,18 +177,30 @@ export function HeroSection() {
                   onChange={(e) => setEmail(e.target.value)}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={isValidating} className="w-full sm:w-auto">
+                <Button
+                  type="submit"
+                  disabled={isValidating || (siteKey ? !turnstileToken : false)}
+                  className="w-full sm:w-auto"
+                >
                   {isValidating ? 'Validating...' : 'Validate'}
                 </Button>
               </div>
+
+              {/* Turnstile Widget Container */}
+              {siteKey && (
+                <div className="mt-4 flex justify-center">
+                  <div id="turnstile-container"></div>
+                </div>
+              )}
             </form>
+
             {result && (
               <div className="mt-4 p-4 bg-background rounded-lg border animate-in mx-2 sm:mx-auto max-w-xl">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="text-left">
                     <p className="font-medium">Valid Syntax:</p>
-                    <p className={result.is_valid ? 'text-success' : 'text-destructive'}>
-                      {result.is_valid ? 'Yes' : 'No'}
+                    <p className={result.syntax_valid ? 'text-success' : 'text-destructive'}>
+                      {result.syntax_valid ? 'Yes' : 'No'}
                     </p>
                   </div>
                   <div className="text-left">
@@ -71,6 +210,11 @@ export function HeroSection() {
                     </p>
                   </div>
                 </div>
+                {result.message && (
+                  <p className="text-muted-foreground text-sm mt-2">
+                    {result.message}
+                  </p>
+                )}
                 <Button
                   variant="link"
                   className="mt-2"
@@ -98,4 +242,3 @@ export function HeroSection() {
     </section>
   );
 }
-
