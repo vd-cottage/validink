@@ -42,6 +42,11 @@ api.interceptors.response.use(
 );
 
 export const apiService = {
+  // Public endpoints (no auth required)
+  public: {
+    tryEmail: (email: string, turnstileToken: string) =>
+      publicApi.post('/api/public/try-email', { email, turnstileToken })
+  },
   auth: {
     login: async (data: { email: string; password: string; totpCode?: string }) => {
       const response = await api.post(API_ROUTES.AUTH.LOGIN, data);
