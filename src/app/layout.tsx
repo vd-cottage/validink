@@ -1,11 +1,11 @@
-import { Inter } from 'next/font/google';
 import { Metadata } from 'next';
 import { ClientProviders } from '@/components/providers/client-providers';
 import { createThemeVariables } from '@/lib/theme/utils';
 import { OrganizationJsonLd, WebsiteJsonLd, SoftwareApplicationJsonLd } from '@/components/seo/json-ld';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+// Use system font stack instead of Google Fonts to avoid build-time network requests
+const fontClassName = 'font-sans';
 
 const themeVariables = createThemeVariables();
 
@@ -86,7 +86,7 @@ export default function RootLayout({
         <SoftwareApplicationJsonLd />
       </head>
       <body
-        className={inter.className}
+        className={fontClassName}
         style={themeVariables as React.CSSProperties}
       >
         <ClientProviders>
