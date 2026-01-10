@@ -23,14 +23,14 @@ export function LogoIcon({ className, ...props }: any) {
     )
 }
 
-export function Logo({ showText = true, className, textClassName, ...props }: LogoProps) {
+export function Logo({ className, ...props }: LogoProps) {
     return (
-        <div className={cn("relative h-10 w-[150px]", className)} {...props}>
+        <div className={cn("relative h-8 w-8", className)} {...props}>
             <Image
-                src="/logo.png"
+                src="/icon.png"
                 alt="ValidInk"
                 fill
-                className="object-contain object-left"
+                className="object-contain"
                 priority
             />
         </div>
