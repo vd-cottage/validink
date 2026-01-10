@@ -25,7 +25,7 @@ export default function LoginPage() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isValid, touchedFields },
+    formState: { errors, touchedFields },
     watch,
     setFocus,
   } = useForm<LoginFormData>({
