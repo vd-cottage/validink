@@ -2,6 +2,19 @@ import axios from 'axios';
 import { API_ROUTES, API_BASE_URL } from '@/lib/constants/api';
 import { MOCK_DATA } from '@/lib/constants/mock';
 
+// Track token state
+let currentToken: string | null = null;
+let tokenReadyPromise: Promise<void> | null = null;
+let resolveTokenReady: (() => void) | null = null;
+
+// Create the promise that will be resolved when token is ready
+const createTokenReadyPromise = () => {
+  tokenReadyPromise = new Promise<void>((resolve) => {
+    resolveTokenReady = resolve;
+  });
+};
+createTokenReadyPromise();
+
 // Export the axios instance for the provider to use
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -9,9 +22,32 @@ export const api = axios.create({
     'Content-Type': 'application/json'
   }
 });
-// Request interceptor removed - handled by AxiosTokenProvider
 
-// Handle response errors
+// Request interceptor to wait for token and inject it
+api.interceptors.request.use(
+  async (config) => {
+    // Wait for token to be ready (max 5 seconds)
+    if (!currentToken && tokenReadyPromise) {
+      const timeout = new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('Token timeout')), 5000)
+      );
+      try {
+        await Promise.race([tokenReadyPromise, timeout]);
+      } catch {
+        // Timeout - proceed anyway, will get 401 if no token
+      }
+    }
+
+    // Inject the token into the request if available
+    if (currentToken && config.headers) {
+      config.headers['Authorization'] = `Bearer ${currentToken}`;
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
 // Use a separate instance for public requests to avoid 401 redirects
 export const publicApi = axios.create({
   baseURL: API_BASE_URL,
@@ -20,9 +56,25 @@ export const publicApi = axios.create({
   }
 });
 
-// Track session ready state (kept for AxiosTokenProvider compatibility)
+// Called by AxiosTokenProvider when session is ready with token
+export const setAuthToken = (token: string | null) => {
+  currentToken = token;
+
+  if (token) {
+    // Token is set, resolve the promise
+    if (resolveTokenReady) {
+      resolveTokenReady();
+      resolveTokenReady = null;
+    }
+  } else {
+    // Token cleared, create new promise for next login
+    createTokenReadyPromise();
+  }
+};
+
+// Keep for backwards compatibility (deprecated, use setAuthToken)
 export const setSessionReady = (_ready: boolean) => {
-  // Session state managed by NextAuth
+  // This is now a no-op, use setAuthToken instead
 };
 
 // Handle response errors (ONLY for authenticated api instance)
