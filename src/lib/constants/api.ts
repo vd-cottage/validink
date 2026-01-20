@@ -18,6 +18,7 @@ export const API_ROUTES = {
     ROLE: `/api/${API_VERSION}/validate/role`,
     REPUTATION: `/api/${API_VERSION}/validate/reputation`,
     SMTP: `/api/${API_VERSION}/validate/smtp`,
+    CATCHALL: `/api/${API_VERSION}/validate/catchall`,
     ENRICH: `/api/${API_VERSION}/validate/enrich`,
     BATCH: `/api/${API_VERSION}/validate/batch`
   },
@@ -35,7 +36,10 @@ export const API_ROUTES = {
   BULK: {
     UPLOAD: `/api/${API_VERSION}/bulk/upload`,
     STATUS: (jobId: string) => `/api/${API_VERSION}/bulk/status/${jobId}`,
-    JOBS: `/api/${API_VERSION}/bulk/jobs`
+    JOBS: `/api/${API_VERSION}/bulk/jobs`,
+    RESULTS: (jobId: string) => `/api/${API_VERSION}/bulk/results/${jobId}`,
+    DOWNLOAD: (jobId: string) => `/api/${API_VERSION}/bulk/download/${jobId}`,
+    CANCEL: (jobId: string) => `/api/${API_VERSION}/bulk/${jobId}`
   },
   // Phase 1 endpoints
   WEBHOOKS: {

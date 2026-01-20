@@ -1,7 +1,6 @@
 import axios from 'axios';
 import { API_ROUTES, API_BASE_URL } from '@/lib/constants/api';
 import { MOCK_DATA } from '@/lib/constants/mock';
-import { getSession } from 'next-auth/react';
 
 // Export the axios instance for the provider to use
 export const api = axios.create({
@@ -22,9 +21,8 @@ export const publicApi = axios.create({
 });
 
 // Track session ready state (kept for AxiosTokenProvider compatibility)
-let isSessionReady = false; // eslint-disable-line
-export const setSessionReady = (ready: boolean) => {
-  isSessionReady = ready;
+export const setSessionReady = (_ready: boolean) => {
+  // Session state managed by NextAuth
 };
 
 // Handle response errors (ONLY for authenticated api instance)
@@ -92,6 +90,8 @@ export const apiService = {
       api.post(API_ROUTES.VALIDATION.REPUTATION, { email }),
     smtp: (email: string) =>
       api.post(API_ROUTES.VALIDATION.SMTP, { email }),
+    catchall: (domain: string) =>
+      api.post(API_ROUTES.VALIDATION.CATCHALL, { domain }),
     enrich: (email: string) =>
       api.post(API_ROUTES.VALIDATION.ENRICH, { email }),
     batch: (emails: string[]) =>
@@ -147,7 +147,13 @@ export const apiService = {
     getStatus: (jobId: string) =>
       api.get(API_ROUTES.BULK.STATUS(jobId)),
     getJobs: () =>
-      api.get(API_ROUTES.BULK.JOBS)
+      api.get(API_ROUTES.BULK.JOBS),
+    getResults: (jobId: string, params?: { page?: number; limit?: number; filter?: 'valid' | 'invalid' }) =>
+      api.get(API_ROUTES.BULK.RESULTS(jobId), { params }),
+    cancel: (jobId: string) =>
+      api.delete(API_ROUTES.BULK.CANCEL(jobId)),
+    getDownloadUrl: (jobId: string) =>
+      `${API_BASE_URL}${API_ROUTES.BULK.DOWNLOAD(jobId)}`
   },
   // Phase 1 services
   webhooks: {
